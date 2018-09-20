@@ -669,8 +669,8 @@ prompt </td></tr>
 prompt <tr><td width=20%><b>Archive log mode</b></td>
 select decode(log_mode,'ARCHIVELOG','<td bgcolor="#33FF33">','<td bgcolor="#FF9900">'),log_mode,'<br>' from v$database;
 prompt </td></tr>
-prompt <tr><td width=20%><b>Archive log destination</b></td>
 
+prompt <tr><td width=20%><b>Archive log destination</b></td>
 select distinct decode(d.log_mode,'ARCHIVELOG','<td bgcolor="LIGHTBLUE">'||p.name||' = '||p.value||'<br/>', '<td bgcolor="LIGHTGREY">') from v$database d,v$parameter p where (p.name like 'log_archive_dest_%' or p.name = 'log_archive_dest') and p.name not like '%state%' and p.value is not NULL;
 
 set define off
@@ -682,10 +682,10 @@ BEGIN
    select count(name) into cnt_dest from v$parameter
    where (name like 'log_archive_dest_%' or name = 'log_archive_dest') and name not like '%state%' and value is not NULL;
    if arch_mode =1 AND cnt_dest=0 then
-      dbms_output.put_line('<tr><td bgcolor="ORANGE" colspan=2>Les ARCHIVE LOGS sont dans la flash_recovery_area ! A d&eacute;placer !');
+      dbms_output.put_line('<td bgcolor="ORANGE" colspan=2>Les ARCHIVE LOGS sont dans la flash_recovery_area ! A d&eacute;placer !');
    end if;
    if arch_mode =0 AND cnt_dest=0 then
-      dbms_output.put_line('<tr><td bgcolor="LIGHTGREY" colspan=2><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20>');
+      dbms_output.put_line('<td bgcolor="LIGHTGREY">');
    end if;
 end;
 /
@@ -701,7 +701,7 @@ BEGIN
    select count(name) into cnt_dest from v$parameter
    where name like 'log_archive_format';
    if cnt_dest=0 then
-      dbms_output.put_line('<td bgcolor="LIGHTGREY"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20>');
+      dbms_output.put_line('<td bgcolor="LIGHTGREY">');
    end if;
 end;
 /
