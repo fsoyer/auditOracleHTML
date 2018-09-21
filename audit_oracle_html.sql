@@ -1,7 +1,7 @@
 -- AUDIT BASES ORACLE
 -- v3.3
 -- Compatible Oracle 10g, 11g, >
--- (c) 2013, Frank Soyer <frank.soyer@gmail.com>
+-- (c) 2005, Frank Soyer <frank.soyer@gmail.com>
 
 -- This program is free software; you can redistribute it and/or
 -- modify it under the terms of the GNU General Public License
