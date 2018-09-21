@@ -1,0 +1,100 @@
+* ******  NOTES / TIPS  ******
+* * NOTE 1 : ATTENTION AUX FORMATS DE COLONNES ALPHANUMERIQUES :
+*   LE XX de "format aXX" DOIT TENIR COMPTE DES BALISES HTML
+*   de TYPE "<td bgcolor="#3399CC" align=center>" QUI SONT
+*   COMPTEES DANS LE TOTAL DE LA CHAINE DE CARACTERE
+* * NOTE 2 : AUTANT QUE POSSIBLE, NE PAS S'OCCUPER DES FORMATS COL
+*   LAISSER PAR DEFAUT LES ALPHA ET UTILISER UN TO_CHAR(valeur,'format numérique') POUR LES NOMBRES
+* * NOTE 3 : Le script cree (ou re-cree) 2 fonctions et une table d'historique dans TOOLS
+*
+* * TIP : pour inclure une image directement dans le code html :
+* <IMG SRC="data:image/gif;base64,R0lGODdhMAAwAPAAAAAAAP///ywAAAAAMAAw AAAC8IyPqcvt3wCcDkiLc7C0qwyGHhSWpjQu5yqmCYsapyuvUUlvONmOZtfzgFz ByTB10QgxOR0TqBQejhRNzOfkVJ+5YiUqrXF5Y5lKh/DeuNcP5yLWGsEbtLiOSp a/TPg7JpJHxyendzWTBfX0cxOnKPjgBzi4diinWGdkF8kjdfnycQZXZeYGejmJl ZeGl9i2icVqaNVailT6F5iJ90m6mvuTS4OK05M0vDk0Q4XUtwvKOzrcd3iq9uis F81M1OIcR7lEewwcLp7tuNNkM3uNna3F2JQFo97Vriy/Xl4/f1cf5VWzXyym7PH hhx4dbgYKAAA7" ALT="Larry">
+* http://www.motobit.com/util/base64-decoder-encoder.asp
+*
+* ******  BUGS CONNUS  ******
+* Incompatibilité de certaines requêtes avec des versions < 10. Le script va quand même au bout.
+* 
+* ******   TODO LIST   ******
+*
+* *** A ETUDIER
+* requêtes intéressantes sur TEMP et SORT segments https://forums.oracle.com/thread/2527064
+* voir tips (DBMS_Output.Put_Line...) dans le script https://oracle-base.com/dba/script?category=monitoring&file=tuning.sql
+
+* AMELIORATIONS GLOBALES (AU SCRIPT)
+-------------------------------------
+* TODO : forcer la création d'un tablespace TOOLS (~100M) s'il n'existe pas ?
+* TODO : UTILISER DES VARIABLES EN DEBUT DE SCRIPT POUR LES SEUILS D'ALERTES ?
+* TODO : Faire une table des matières (ancres HTML). Frames ou menu javascript ?
+* TODO : Remplacer les fonctions stockées de colorisation PL/SQL par du javascript ?
+*        Javascript inséré systématiquement en haut du fichier HTML produit, réutilisable dans les requêtes ?
+* TODO : ajouter le texte des calculs de ratios en "title" sur les colonnes "Ratio"
+* TODO : remplacer les "dbms_output" par des "prompt" (et enlever les serveroutput on) : possible partout ?
+*
+* AMELIORATIONS LOCALES (AUX SECTIONS)
+---------------------------------------
+* *** Histaudit :
+* TODO : nettoyer historique > 1 an
+* *** Host :
+* BUG : la table v$osstat n'a pas toujours la stat "NUM_CPU_CORES". ligne vide renvoyée. A voir !
+* TODO : ajout stats systèmes SYSSTATS_MAIN ? Est-ce disponible sous la même forme sur toutes les versions depuis 10g ?
+*        select sname, pname, pval1 from sys.aux_stats$;
+* *** Volumetrie :
+* TODO : Afficher un graphe evolution volumétrie (attention aux creations de fichiers entre deux audits)
+*        comment faire en pur HTML, sans PHP ou autre ?
+* TODO : Etudier V$TEMPSEG_USAGE preformances tablespace temporaire
+* *** Segments :
+* TODO : Analyze de la fragmentation des indexes (difficile : nécessite l'activation d'audit + analyze ?)
+* TODO : Afficher l'état du BLOCK CHANGE TRACKING
+* select filename, status, bytes
+*   from   v$block_change_tracking;
+* *** Memoire :
+* TODO : garder le nombre de sessions dans HISTAUDIT pour graphique d'evolution et moyenne ?
+* TODO : affiner les stats d'opérations ASMM (variation des tailles de pools) avec v$sga_resize_ops et v$sga_dynamic_components :
+*        select component, current_size from v$sga_dynamic_components;
+*        select component,oper_type,oper_mode,initial_size/1024/1024 "Initial",TARGET_SIZE/1024/1024 "Target",FINAL_SIZE/1024/1024 "Final",status from v$sga_resize_ops order by component;
+*        select component,current_size/1024/1024 "CURRENT_SIZE",min_size/1024/1024 "MIN_SIZE",user_specified_size/1024/1024 "USER_SPECIFIED_SIZE",last_oper_type "TYPE" from v$sga_dynamic_components order by component;
+* TODO : RAPPORTER LES STATS *_ADVICE. Voir les requêtes :
+* http://www.dba-oracle.com/oracle_tips_pga_advice.htm
+* http://www.dba-oracle.com/oracle_tips_shared_pool_advice.htm
+* http://www.dba-oracle.com/oracle_tips_data_cache_advice.htm
+* TODO : requêtes + gourmandes, ajouter ratio CPU analyse/temps total analyse (par requête) doit être proche de 1 et analyse/temps total session (doit être 0%, l'analyse ne doit pas être visible sur l'ensemble)
+*     1: SELECT name,value FROM V$SYSSTAT WHERE NAME IN('parse time cpu', 'parse time elapsed', 'parse count (hard)')
+*     2: SELECT ((parse.value + recurs.value)/cpuused.value)*100
+*           FROM (select value from V$SYSSTAT
+*                 WHERE NAME = 'recursive cpu usage') recurs,
+*                (select value from V$SYSSTAT
+*                 WHERE name='parse time cpu') parse,
+*                (select value from V$SYSSTAT
+*                 WHERE name='CPU used by this session') cpuused
+* *** Schemas :
+* TODO : Section SCHEMAS = Liste des grants par user et par role non systeme
+* TODO : Afficher N/A si 1er audit ou aucuns objets utilisateurs
+* TODO : Ajouter une colonne user, et grouper par user pour detecter d'eventuels users system oublies dans le NOT IN, plus une ligne total global à la fin du tableau
+* *** Requetes les plus gourmandes
+* TODO : Passer en orange les requêtes > xx sec.
+
+* *** Amélioration de l'affichage des logs alert.log
+* TODO : au premier audit, prendre par exemple J-60 ou 90 pour afficher quand même d'éventuelles erreurs dans l'alert.log à voir tout de suite
+* TODO : intercepter l'erreur ORA-01653 si le nombre de msg à afficher de l'alert.log est trop grand depuis le dernier audit:
+*   "declare * ERREUR Ã  la ligne 1 : ORA-01653: impossible d'étendre la table SYSTEM.ALERT_LOG de 128 dans le tablespace TOOLS ORA-06512: Ã  ligne 77"
+* TODO : affichage : grouper les messages si identiques sur plusieurs lignes consécutives et afficher la somme pour limiter le nombre de ligne ?
+*        -> utiliser un curseur, comparer une ligne à la ligne du dessus gardée dans une variable, si identique, incrémenter un compteur,
+*        -> et quand le msg change, afficher le msg + "<br/>(+ XX messages identiques entre le dd-mm-yy hh:mm et le dd-mm-yy hh:mm)"
+*    Peut-on faire ça sur du multiligne ? Comment détecter que c'est un seul message sur plusieurs lignes ? Avec l'heure ?
+*     ou alors, avoir une liste d'expressions multilignes et l'alimenter au besoin. Exemples :
+*  ALTER DATABASE CLOSE NORMAL
+*  ALTER DATABASE DISMOUNT
+*  ALTER DATABASE MOUNT
+*  ALTER DATABASE OPEN   (le tout en LOWER(...))
+* ou
+*  ORA-29400: erreur de cartouche de données
+*  ORA-20011: Approximate NDV failed: ORA-29913: erreur d'exécution de l'appel ODCIEXTTABLEOPEN
+* ou encore
+*	ORA-29273: HTTP request failed
+*	ORA-12545: Connect failed because target host or object does not exist
+* ou
+*  TNS-00505: Temps imparti à l'opération écoulé
+*  TNS-12535: TNS : le délai imparti à l'opération est écoulé 
+* ####-------> une piste : alimenter une liste manuelle des messages à regrouper, ex: ORA-29400+ORA-20011 à considérer comme une seule ligne. Une liste comme sysusers ou exusers peut peut-être convenir.
+* TODO : Mettre en orange des messages critiques ? (autres que checkpoint, arrêt normal de base, backups,...). Comment les sélectionner ? Avec un flag dans une liste comme ci-dessus ?
+
