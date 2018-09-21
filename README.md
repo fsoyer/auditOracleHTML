@@ -1,8 +1,8 @@
 # auditOracleHTML
 Script de génération d'un rapport d'audit Oracle au format HTML
 ----------------------------------
-This script has been evolving since I checked Oracle databases. As a good geek, I spent a lot of time to instruct the machine to do what I repetitively manually do since the beginning.
-It is - will be - not - never - finished.
+This script has been evolving since I checked Oracle databases. As a good geek, I spent a lot of time to instruct the machine to do what I repetitively manually did since the beginning.
+It is/will be probably not/never finished.
 
 All ideas, contributions, propositions, fixes, updates, are welcome.
 It is provided as is, use it at your own risks - but I use it since years on production databases without issues.
