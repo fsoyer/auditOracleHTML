@@ -1,5 +1,5 @@
 # auditOracleHTML
-Script to generate a Oracle (10g+) audit report of performances in HTML
+Script to generate an Oracle (10g+) audit report of performances in HTML
 ----------------------------------
 This script has been evolving since I checked Oracle databases. As a good geek, I spent a lot of time to instruct the machine to do what I repetitively manually did since the beginning.
 It is/will be probably not/never finished.
