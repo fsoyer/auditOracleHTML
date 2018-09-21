@@ -1,5 +1,5 @@
 # auditOracleHTML
-Script de génération d'un rapport d'audit MySQL au format HTML
+Script de génération d'un rapport d'audit Oracle au format HTML
 ----------------------------------
 * ******  USAGE  ******
 * ****** IMPORTANT : le script doit être lancé par sqlplus, en tant que SYSTEM ******
