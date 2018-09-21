@@ -1,6 +1,13 @@
 # auditOracleHTML
 Script de génération d'un rapport d'audit Oracle au format HTML
 ----------------------------------
+This script has been evolving since I checked Oracle databases. As a good geek, I spent a lot of time to instruct the machine to do what I repetitively manually do since the beginning.
+It is - will be - not - never - finished.
+
+All ideas, contributions, propositions, fixes, updates, are welcome.
+It is provided as is, use it at your own risks - but I use it since years on production databases without issues.
+For a wider understanding, I'll translate parts in french step by step.
+----------------------------------
 * ******  USAGE  ******
 * ****** IMPORTANT : le script doit être lancé par sqlplus, en tant que SYSTEM ******
 * ****** IMPORTANT : un tablespace "TOOLS" doit exister dans la base pour la table d'audit ******
