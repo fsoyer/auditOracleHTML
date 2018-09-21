@@ -5,25 +5,33 @@ Script de génération d'un rapport d'audit MySQL au format HTML
 * ****** IMPORTANT : le script doit être lancé par sqlplus, en tant que SYSTEM ******
 * ****** IMPORTANT : un tablespace "TOOLS" doit exister dans la base pour la table d'audit ******
 * TNS :
+```
  sqlplus -S system/manager@ORCL /repertoire/audit_complet_html > audit.html
+```
 * Easyconnect :
+```
  sqlplus -S system/manager@//server_oracle:1521/ORCL /repertoire/audit_complet_html > audit.html
+```
 * "-S" = silently
 *
 * Exemple, sous linux, en utilisant des variables et Easyconnect :
+```
  SQLP=/usr/lib/oracle/xe/app/oracle/product/10.2.0/client/scripts/sqlplus.sh
  AUDIT_SCRIPT=/scripts/Audit_Oracle/audit_complet_html
  CONNEXION='//server_oracle:1521/ORCL'
  RAPPORT=audit.html
  $SQLP system/manager@$CONNEXION @$AUDIT_SCRIPT > $RAPPORT
+```
 *
 * Pour info, script sqlplus.sh adapté pour linux (UTF8 et coupures de lignes)
 * nécessite l'outil rlwrap
+```
      #!/bin/bash
      export LD_LIBRARY_PATH=/<rép. Oracle Client>/OraHome_1
      export ORACLE_HOME=/<rép. Oracle Client>/OraHome_1
      export EDITOR=vi
      NLS_LANG=FRENCH_FRANCE.UTF8 rlwrap -m $ORACLE_HOME/bin/sqlplus $1 $2 $3 $4 $5
+```
 *
 ----------------------
 * Changelog :
