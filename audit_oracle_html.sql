@@ -560,9 +560,6 @@ prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Informations Fl
 prompt <tr><td  bgcolor="WHITE" width=20%><b>Chemin</b></td><td><b>Espace totale</b></td></td><td><b>Espace utilis&eacute;</b></td></tr>
 set define "&"
 
-SELECT '<tr><td bgcolor="LIGHTBLUE">',name,'</td><td bgcolor="LIGHTBLUE" align=right>', round(space_limit/1024/1024/1024,2),' Go</td><td bgcolor="',CouleurLimite(SPACE_USED,space_limit*0.80,space_limit*0.10,1),'" align=right>', round(SPACE_USED/1024/1024/1024,2), 'Go'
-FROM V$RECOVERY_FILE_DEST;
-
 -- https://docs.oracle.com/database/121/ADMQS/GUID-59C29B1D-8536-4C43-B999-46CC5F61F430.htm#ADMQS12106
 -- mettre en note title que le rm des archives qui y seraient ne suffit pas : il faut ensuite rman crosscheck+delete expired pour libérer l'espace.
 
@@ -573,6 +570,9 @@ BEGIN
    select count(name) into fra_cnt from V$RECOVERY_FILE_DEST;
    if fra_cnt =0 then
       dbms_output.put_line('<tr><td bgcolor="ORANGE" colspan=3 align=center>Flash recovery area d&eacute;sactiv&eacute;e');
+   else
+      SELECT '<tr><td bgcolor="LIGHTBLUE">',name,'</td><td bgcolor="LIGHTBLUE" align=right>', round(space_limit/1024/1024/1024,2),' Go</td><td bgcolor="',CouleurLimite(SPACE_USED,space_limit*0.80,space_limit*0.10,1),'" align=right>', round(SPACE_USED/1024/1024/1024,2), 'Go'
+      FROM V$RECOVERY_FILE_DEST;
    end if;
 end;
 /
