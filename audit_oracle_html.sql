@@ -566,13 +566,16 @@ set define "&"
 set define off
 DECLARE
 fra_cnt number := 0;
+line varchar2(2000);
 BEGIN
    select count(name) into fra_cnt from V$RECOVERY_FILE_DEST;
-   if fra_cnt =0 then
+   if fra_cnt = 0 then
       dbms_output.put_line('<tr><td bgcolor="ORANGE" colspan=3 align=center>Flash recovery area d&eacute;sactiv&eacute;e');
    else
-      SELECT '<tr><td bgcolor="LIGHTBLUE">',name,'</td><td bgcolor="LIGHTBLUE" align=right>', round(space_limit/1024/1024/1024,2),' Go</td><td bgcolor="',CouleurLimite(SPACE_USED,space_limit*0.80,space_limit*0.10,1),'" align=right>', round(SPACE_USED/1024/1024/1024,2), 'Go'
+      SELECT '<tr><td bgcolor="LIGHTBLUE">'||name||'</td><td bgcolor="LIGHTBLUE" align=right>'||round(space_limit/1024/1024/1024,2)||' Go</td><td bgcolor="'||CouleurLimite(SPACE_USED,space_limit*0.80,space_limit*0.10,1)||'" align=right>'||round(SPACE_USED/1024/1024/1024,2)||'Go'
+      into line
       FROM V$RECOVERY_FILE_DEST;
+      dbms_output.put_line(line);
    end if;
 end;
 /
