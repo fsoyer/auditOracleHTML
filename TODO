@@ -22,6 +22,7 @@
 
 * AMELIORATIONS GLOBALES (AU SCRIPT)
 -------------------------------------
+* TODO : translation on the fly : init a variable LANG at the beginning of the script. Then init variables TXT_[id of the sentence]_[LANG] with text translated. Finally, in the script for each text, use something like : "SELECT TXT_[id]_&LANG" (to be tested and validated)
 * TODO : forcer la création d'un tablespace TOOLS (~100M) s'il n'existe pas ?
 * TODO : UTILISER DES VARIABLES EN DEBUT DE SCRIPT POUR LES SEUILS D'ALERTES ?
 * TODO : Faire une table des matières (ancres HTML). Frames ou menu javascript ?
