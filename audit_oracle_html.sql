@@ -1205,6 +1205,8 @@ BEGIN
       dbms_output.put_line(v_res);
      end loop;
   $END
+-- mandatory for 10g as the block $IF-$END disapears, it needs at least on line between BEGIN and END
+  v_sql := '';
 END;
 /
 
