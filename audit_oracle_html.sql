@@ -166,7 +166,9 @@ BEGIN
     where table_name='HISTAUDIT' and owner='SYSTEM';
    select count(tablespace_name) into tabtools from dba_tablespaces
     where tablespace_name='TOOLS';
-   select tablespace_name into tabtab from dba_tables where table_name='HISTAUDIT';
+   IF tabhist > 0 THEN
+      select tablespace_name into tabtab from dba_tables where table_name='HISTAUDIT';
+   END IF;
 
    IF tabhist = 0 THEN
       IF tabtools = 0 THEN
