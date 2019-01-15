@@ -18,11 +18,11 @@ For a wider understanding, I'll translate parts in french step by step.
 * ****** IMPORTANT : un tablespace "TOOLS" doit exister dans la base pour la table d'audit ******
 * TNS :
 ```
- sqlplus -S system/manager@ORCL /repertoire/audit_complet_html > audit.html
+ sqlplus -S system/manager@ORCL @/repertoire/audit_oracle_html > audit.html
 ```
 * Easyconnect :
 ```
- sqlplus -S system/manager@//server_oracle:1521/ORCL /repertoire/audit_complet_html > audit.html
+ sqlplus -S system/manager@//server_oracle:1521/ORCL @/repertoire/audit_oracle_html > audit.html
 ```
 * "-S" = silently
 *

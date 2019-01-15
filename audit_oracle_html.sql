@@ -165,7 +165,7 @@ BEGIN
    select count(table_name) into tabhist from dba_tables
     where table_name='HISTAUDIT' and owner='SYSTEM';
    select count(tablespace_name) into tabtools from dba_tablespaces
-    where tablespace_name='TOOLS';
+    where tablespace_name like 'TOOLS';
    IF tabhist > 0 THEN
       select tablespace_name into tabtab from dba_tables where table_name='HISTAUDIT';
    END IF;
@@ -216,7 +216,7 @@ BEGIN
 		     dbms_output.put_line('<td bgcolor="#FF0000">Modification table HISTAUDIT (col OBJ_NAME)');
 		  END IF;
       END IF;
-      IF tabtools = 0 OR tabtab = 'SYSTEM' THEN
+      IF tabtab = 'SYSAUX' OR tabtab = 'SYSTEM' THEN
          dbms_output.put_line('(tablespace '||tabtab||')<br>');
          dbms_output.put_line('Ajouter un tablespace <b>TOOLS</b> et y d&eacute;placer la table '||tabtab||'.HISTAUDIT</br>');
       ELSE
@@ -1706,12 +1706,12 @@ prompt <!-- ALERT.LOG -->
 
 define alert_length="2000"
 column nlsdate new_value _nlsdate noprint;
-column bdump   new_value _bdump noprint;
+-- column bdump   new_value _bdump noprint;
 column db      new_value _db    noprint;
 
 select VALUE nlsdate from NLS_DATABASE_PARAMETERS where parameter = 'NLS_DATE_LANGUAGE';
-select VALUE bdump from v$parameter 
-   where name ='background_dump_dest';
+-- select VALUE bdump from v$parameter 
+--   where name ='background_dump_dest';
 select instance_name db from v$instance;
 
 -- *************************************** creation ou vidage de la table finale "alert_log"
@@ -1745,18 +1745,38 @@ END;
 /
 
 -- *****************************************  external table alert_log_disk
+
+var sbdump varchar2(255);
+col sbdump new_value sbdump;
 DECLARE
-   dir_exist number;
+dir_exist number;
+bdump varchar2(255);
+v_sql varchar2(2000);
 BEGIN
+   $IF dbms_db_version.version > 11 $THEN
+      select VALUE into bdump from v$diag_info where NAME='Diag Trace';
+   $ELSE
+      select VALUE into bdump from v$parameter where name ='background_dump_dest';
+   $END
    select count(DIRECTORY_NAME) into dir_exist from dba_directories
-   where DIRECTORY_NAME='BDUMP'
-   and owner in ('SYSTEM','SYS');
+    where DIRECTORY_NAME='BDUMP'
+    and owner in ('SYSTEM','SYS');
    IF dir_exist <> 0 THEN
       EXECUTE IMMEDIATE 'drop directory BDUMP';
    END IF;
-   EXECUTE IMMEDIATE 'create directory BDUMP as ''&_bdump''';
+   v_sql := 'create directory BDUMP as ''' || bdump || '''';
+   EXECUTE IMMEDIATE v_sql;
+   :sbdump := bdump; -- sbdump string used with prompt below
+--   dbms_output.put_line (bdump);
 END;
 /
+
+-- why ? If not printed here, the variable sbdump isn't recognized by prompt...
+prompt <!--
+
+print :sbdump
+
+prompt -->
 
 DECLARE
    table_exist number;
@@ -1910,7 +1930,7 @@ prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:i
 print info
 prompt " width="20" height="20" alt="Info..." title="Messages d'erreurs depuis le dernier audit. Si des messages sont affich&eacute;s, voir le d&eacute;tail dans le fichier alert<SID>.log, ou la table ALERT_LOG (r&eacute;sum&eacute;), ou la table externe ALERT_LOG_DISK (qui contient tout l'alert.log)."></td>
 set define "&"
-prompt <td align=center><font color="WHITE"><b>&_bdump/alert_&_db..log</b></font></td></tr></table></td></tr>
+prompt <td align=center><font color="WHITE"><b>&sbdump/alert_&_db..log</b></font></td></tr></table></td></tr>
 prompt <tr><td width=20%><b>Date</b></td><td width=80%><b>Texte</b></td></tr>
 
 
