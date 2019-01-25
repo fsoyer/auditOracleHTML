@@ -396,7 +396,9 @@ print info
 prompt " width="20" height="20" alt="Tips..." title="Les principaux param&egrave;tres d&#39;initialisation sont indiqu&eacute;s dans les sections correspondant &agrave; leur champ d&#39;action. Ne sont list&eacute;s ici que les param&egrave;tres qui ne sont pas notifi&eacute;s ailleurs dans ce document."></td>
 prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Autres param&egrave;tres d&#39;initialisation (instance)</b></font></td></tr></table></td></tr>
 prompt <tr><td width=20%><b>Param&egrave;tre</b></td><td width=50%><b>Valeur</b></td>
-select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where name in ('open_cursors','processes','compatible','remote_login_passwordfile','session','utl_file_dir','undo_retention') order by 1;
+select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where name in ('open_cursors','processes','compatible','remote_login_passwordfile','session','utl_file_dir','undo_retention')
+union
+select '<tr><td bgcolor="LIGHTBLUE">', au.name, '</td>', '<td bgcolor="LIGHTBLUE">', decode(lower(au.value), 'os', au.value||' ('||aup.value||')', 'xml', au.value||' ('||aup.value||')', 'xml, extended', au.value||' ('||aup.value||')', au.value),'</td>','</tr>' from v$parameter au, v$parameter aup where au.name='audit_trail' and aup.name='audit_file_dest';
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (PARAMETRES INIT)
 delete from system.histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='INIT';
@@ -1766,13 +1768,18 @@ BEGIN
    END IF;
    v_sql := 'create directory BDUMP as ''' || bdump || '''';
    EXECUTE IMMEDIATE v_sql;
-   :sbdump := bdump; -- sbdump string used with prompt below
+-- sbdump string used with prompt below
+   IF substr(bdump,2,1) = ':' THEN
+      :sbdump := bdump || '\'; -- Windows path'
+   ELSE
+      :sbdump := bdump || '/'; -- unix path
+   END IF;
 --   dbms_output.put_line (bdump);
 END;
 /
 
--- why ? If not printed here, the variable sbdump isn't recognized by prompt...
 prompt <!--
+-- If not printed once here before, the variable sbdump isn't recognized by prompt below... Why ?
 
 print :sbdump
 
@@ -1930,7 +1937,7 @@ prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:i
 print info
 prompt " width="20" height="20" alt="Info..." title="Messages d'erreurs depuis le dernier audit. Si des messages sont affich&eacute;s, voir le d&eacute;tail dans le fichier alert<SID>.log, ou la table ALERT_LOG (r&eacute;sum&eacute;), ou la table externe ALERT_LOG_DISK (qui contient tout l'alert.log)."></td>
 set define "&"
-prompt <td align=center><font color="WHITE"><b>&sbdump/alert_&_db..log</b></font></td></tr></table></td></tr>
+prompt <td align=center><font color="WHITE"><b>&sbdump</b><b>alert_&_db..log</b></font></td></tr></table></td></tr>
 prompt <tr><td width=20%><b>Date</b></td><td width=80%><b>Texte</b></td></tr>
 
 
