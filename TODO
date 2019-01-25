@@ -1,38 +1,38 @@
 * ******  NOTES / TIPS  ******
-* * NOTE 1 : ATTENTION AUX FORMATS DE COLONNES ALPHANUMERIQUES :
-*   LE XX de "format aXX" DOIT TENIR COMPTE DES BALISES HTML
-*   de TYPE "<td bgcolor="#3399CC" align=center>" QUI SONT
-*   COMPTEES DANS LE TOTAL DE LA CHAINE DE CARACTERE
-* * NOTE 2 : AUTANT QUE POSSIBLE, NE PAS S'OCCUPER DES FORMATS COL
-*   LAISSER PAR DEFAUT LES ALPHA ET UTILISER UN TO_CHAR(valeur,'format numérique') POUR LES NOMBRES
-* * NOTE 3 : Le script cree (ou re-cree) 2 fonctions et une table d'historique dans TOOLS
+* * NOTE 1 : BEWARE OF ALPHANUM COL FORMATS :
+*   XX size in "format aXX" needs to take account of additional HTML code
+*   like "<td bgcolor="#3399CC" align=center>" that are included in the string !
+* * NOTE 2 : Depends of note 1, if possible do not use col formats. Leave ALPHA by default and use TO_CHAR(valeur,'format numérique') for numbers
+* * NOTE 3 : This script creates (ou re-creates) 2 functions (for display) et 1 table (for historical purposes) in SYSTEM or TOOLS (if exists) tablespace
 *
-* * TIP : pour inclure une image directement dans le code html :
+* * TIP : including an image directly in html code :
 * <IMG SRC="data:image/gif;base64,R0lGODdhMAAwAPAAAAAAAP///ywAAAAAMAAw AAAC8IyPqcvt3wCcDkiLc7C0qwyGHhSWpjQu5yqmCYsapyuvUUlvONmOZtfzgFz ByTB10QgxOR0TqBQejhRNzOfkVJ+5YiUqrXF5Y5lKh/DeuNcP5yLWGsEbtLiOSp a/TPg7JpJHxyendzWTBfX0cxOnKPjgBzi4diinWGdkF8kjdfnycQZXZeYGejmJl ZeGl9i2icVqaNVailT6F5iJ90m6mvuTS4OK05M0vDk0Q4XUtwvKOzrcd3iq9uis F81M1OIcR7lEewwcLp7tuNNkM3uNna3F2JQFo97Vriy/Xl4/f1cf5VWzXyym7PH hhx4dbgYKAAA7" ALT="Larry">
+* Encoding an image to base64 :
 * http://www.motobit.com/util/base64-decoder-encoder.asp
 *
-* ******  BUGS CONNUS  ******
-* Incompatibilité de certaines requêtes avec des versions < 10. Le script va quand même au bout.
+* ******  KNOWN BUGS  ******
+* Some queries are not compatible with Oracle versions < 10. However the script is executed despite some errors.
 * 
+*
 * ******   TODO LIST   ******
 *
-* *** A ETUDIER
-* requêtes intéressantes sur TEMP et SORT segments https://forums.oracle.com/thread/2527064
-* voir tips (DBMS_Output.Put_Line...) dans le script https://oracle-base.com/dba/script?category=monitoring&file=tuning.sql
+* *** TO EXPLORE
+* interesting queries on TEMP and SORT segments : https://forums.oracle.com/thread/2527064
+* see tips (DBMS_Output.Put_Line...) in script : https://oracle-base.com/dba/script?category=monitoring&file=tuning.sql
 
-* AMELIORATIONS GLOBALES (AU SCRIPT)
--------------------------------------
-* TODO : translation on the fly : init a variable LANG at the beginning of the script. Then init variables TXT_[id of the sentence]_[LANG] with text translated. Finally, in the script for each text, use something like : "SELECT TXT_[id]_&LANG" (to be tested and validated)
-* TODO : forcer la création d'un tablespace TOOLS (~100M) s'il n'existe pas ?
-* TODO : UTILISER DES VARIABLES EN DEBUT DE SCRIPT POUR LES SEUILS D'ALERTES ?
-* TODO : Faire une table des matières (ancres HTML). Frames ou menu javascript ?
-* TODO : Remplacer les fonctions stockées de colorisation PL/SQL par du javascript ?
-*        Javascript inséré systématiquement en haut du fichier HTML produit, réutilisable dans les requêtes ?
-* TODO : ajouter le texte des calculs de ratios en "title" sur les colonnes "Ratio"
-* TODO : remplacer les "dbms_output" par des "prompt" (et enlever les serveroutput on) : possible partout ?
+* GLOBAL IMPROVEMENTS (RELATIVE TO THE ENTIRE SCRIPT)
+-----------------------------------------------------
+* TODO : translation on the fly. To try : Init a variable LANG at the beginning of the script. Then, init variables TXT_[id of the sentence]_[LANG] with text translated. Finally, in the script for each text, use something like : "SELECT TXT_[id]_&LANG" (to be tested and validated)
+* TODO : force the creation of tablespace TOOLS (~100M) if not exist ?
+* TODO : USE VARIABLES AT THE BEGINNING OF THE SCRIPT FOR ALERT THRESHOLDS ?
+* TODO : Do a summary (HTML anchors). Frames or javascript ?
+* TODO : Replace stored PL/SQL functions for colorization by javascript ?
+*        Javascript systematically inserted at the beginning of the HTML file, reusable in queries ?
+* TODO : add the text of ratios computed as "title" of the "Ratio" columns
+* TODO : replace all "dbms_output" by "prompt" (then remove "serveroutput on") : is this possible everywhere ?
 *
-* AMELIORATIONS LOCALES (AUX SECTIONS)
----------------------------------------
+* LOCAL IMPROVEMENTS (RELATIVE TO EACH SECTION)
+-----------------------------------------------
 * *** Histaudit :
 * TODO : nettoyer historique > 1 an
 * *** Host :
