@@ -889,6 +889,35 @@ where a.obj_name=h.obj_name;
 
 prompt </table><br>
 
+-- TABLESPACE(S) SUPPRIME(S)
+set define off
+
+DECLARE
+ tbsremoved_cnt number := 0;
+ v_cur SYS_REFCURSOR;
+ v_res varchar2(255);
+ v_sql varchar2(2000);
+BEGIN
+   select count(OBJ_NAME) into tbsremoved_cnt from system.histaudit
+     where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit where to_date(date_aud) < trunc(sysdate))
+     and OBJ_NAME not in (select tablespace_name from dba_tablespaces);
+   if tbsremoved_cnt > 0 then
+     v_sql := 'SELECT ''<tr><td bgcolor="ORANGE">''||OBJ_NAME||''</td></tr>''
+      FROM system.histaudit
+        where type_obj=''TBS'' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit where to_date(date_aud) < trunc(sysdate))
+      and OBJ_NAME not in (select tablespace_name from dba_tablespaces) ';
+     dbms_output.put_line('<table border=1 width=100% bgcolor="WHITE"><tr><td bgcolor="#3399CC" align=center><font color="WHITE"><b>Tablespace(s) supprim&eacute;(s) depuis le dernier audit</b></font></td></tr>');
+     open v_cur for v_sql;
+     loop
+       fetch v_cur into v_res;
+       EXIT WHEN v_cur%NOTFOUND;
+       dbms_output.put_line(v_res);
+     end loop;
+     dbms_output.put_line('</table><br>');
+   end if;
+END;
+/
+set define "&"
 -- *************************************** SEGMENTS
 prompt <hr>
 prompt <div align=center><b><font color="WHITE" size=2>SEGMENTS (Objets utilisateurs)</font></b></div>
