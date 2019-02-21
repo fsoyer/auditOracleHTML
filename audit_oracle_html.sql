@@ -1149,15 +1149,17 @@ prompt </table><br>
 --prompt </table><br>
 
 -- *************************************** FULL SCANS
+-- if a read request causes a large multiblock read on disk, it can mean that it is doing a full scan read
+-- so : if phyblkrd (blocks) is much greater than phyrds (read requests), this can be due to full scans
 prompt <table border=1 width=100% bgcolor="WHITE">
 set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
-prompt " width="20" height="20" alt="Tips..." title="La d&eacute;tection des FULL SCANS est faite par le rapport entre les requ&ecirc;tes de lectures et les lectures des donn&eacute;es sur disque (les blocs). Un ratio > 50% signifie qu&#39;un petit nombre de requ&ecirc;tes lisent un grand nombre de blocs, ce qui indique que les fichiers sont lus en entier trop fr&eacute;quemment."></td>
+prompt " width="20" height="20" alt="Tips..." title="La d&eacute;tection des FULL SCANS est faite par le rapport entre les requ&ecirc;tes de lecture et les chargements des donn&eacute;es du disque (les blocs). Un ratio > 50% signifie qu&#39;un petit nombre de requ&ecirc;tes lisent un grand nombre de blocs, ce qui indique que les fichiers sont lus en entier trop fr&eacute;quemment."></td>
 
 prompt <td align=center><font color="WHITE"><b>D&eacute;tection des FULL SCAN sur disque</b></font></td></tr></table></td></tr>
-prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Read requests</b></td><td><b>Blocks read</b></td><td><b>ratio (%)</b></td></tr>
+prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Read requests</b></td><td><b>Blocks read</b></td><td><b>ratio (% de full scans)</b></td></tr>
 set define "&"
 
 select
@@ -1165,10 +1167,12 @@ select
 '<td bgcolor="LIGHTBLUE">',f.file_name,'</td>',
 '<td bgcolor="LIGHTBLUE" align=right>',v.phyrds,'</td>',
 '<td bgcolor="LIGHTBLUE" align=right>',v.phyblkrd,'</td>',
-'<td bgcolor="',CouleurLimite(ROUND(100*(v.phyrds/v.phyblkrd),0),20,5,0),'" align=right>',TO_CHAR(DECODE(v.phyblkrd,0,null,ROUND(100*(v.phyrds/v.phyblkrd),0))),'%</td>',
+'<td bgcolor="',CouleurLimite(ROUND(100*(1-(v.phyrds/greatest(v.phyblkrd,1))),0),50,5,1),'" align=right>',ROUND(100*(1-(v.phyrds/greatest(v.phyblkrd,1))),0),'%</td>',
 '</tr>'
-from DBA_data_files f, v$filestat v
+from DBA_data_files f, DBA_tablespaces t, v$filestat v
 where f.file_id=v.file#
+and f.tablespace_name=t.tablespace_name
+and t.contents <> 'UNDO'
 ORDER BY f.tablespace_name,v.file#;
 
 prompt </table><br>
