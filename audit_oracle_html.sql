@@ -1158,7 +1158,7 @@ prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:i
 print tips
 prompt " width="20" height="20" alt="Tips..." title="La d&eacute;tection des FULL SCANS est faite par le rapport entre les requ&ecirc;tes de lecture et les chargements des donn&eacute;es du disque (les blocs). Un ratio > 50% signifie qu&#39;un petit nombre de requ&ecirc;tes lisent un grand nombre de blocs, ce qui indique que les fichiers sont lus en entier trop fr&eacute;quemment."></td>
 
-prompt <td align=center><font color="WHITE"><b>D&eacute;tection des FULL SCAN sur disque</b></font></td></tr></table></td></tr>
+prompt <td align=center><font color="WHITE"><b>D&eacute;tection des FULL SCANs</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Read requests</b></td><td><b>Blocks read</b></td><td><b>ratio (% de full scans)</b></td></tr>
 set define "&"
 
@@ -1172,6 +1172,7 @@ select
 from DBA_data_files f, DBA_tablespaces t, v$filestat v
 where f.file_id=v.file#
 and f.tablespace_name=t.tablespace_name
+and f.tablespace_name not in ('SYSTEM','SYSAUX')
 and t.contents <> 'UNDO'
 ORDER BY f.tablespace_name,v.file#;
 
