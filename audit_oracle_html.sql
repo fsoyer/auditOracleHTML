@@ -1593,7 +1593,8 @@ prompt <tr><td width=15%><b>Nom</b></td><td width=15%><b>Valeur</b></td></tr>
 set define "&"
 select '<tr>','<td bgcolor="LIGHTBLUE">'||name||'</td>', '<td bgcolor="LIGHTBLUE" align=right>'||value||'</td>','</tr>' from v$sysstat
 where name in ('db block gets from cache','consistent gets from cache','physical reads cache')
-UNION ALL
+order by 1;
+-- UNION ALL
 select '<tr>','<td bgcolor="WHITE" title="ratio global pour tous les pools ((db blocks gets+consistent gets)-physical reads)/(db blocks gets+consistent gets)">Ratio <b>v$sysstat</b></td>','<td bgcolor="'||CouleurLimite(round(((t1.value+t2.value)-t3.value)/(t1.value+t2.value),2)*100,70,10,0)||'" align=right>'||round(((t1.value+t2.value)-t3.value)/(t1.value+t2.value),2)*100||' %</td>','</tr>'
 from v$sysstat t1, v$sysstat t2, v$sysstat t3
 where t1.name='db block gets from cache' and t2.name='consistent gets from cache' and t3.name='physical reads cache';
@@ -1601,12 +1602,12 @@ where t1.name='db block gets from cache' and t2.name='consistent gets from cache
 -- difference v$sysstat/v$buffer_pool_statistics : voir si 'physical reads direct' 'physical reads direct (lob)' à enlever à
 -- 'physical reads' sur v$sysstat change qqchose ?
 
-select '<tr>','<td bgcolor="LIGHTBLUE">db_block_gets (pool '||name||')</td>' as name, '<td bgcolor="LIGHTBLUE" align=right>'||db_block_gets||'</td>','</tr>' from  v$buffer_pool_statistics
-UNION
-select '<tr>','<td bgcolor="LIGHTBLUE">consistent_gets (pool '||name||')</td>' as name, '<td bgcolor="LIGHTBLUE" align=right>'||consistent_gets||'</td>','</tr>' from  v$buffer_pool_statistics
-UNION
-select '<tr>','<td bgcolor="LIGHTBLUE">physical_reads (pool '||name||')</td>' as name, '<td bgcolor="LIGHTBLUE" align=right>'||physical_reads||'</td>','</tr>' from  v$buffer_pool_statistics
-UNION ALL
+select '<tr>','<td bgcolor="LIGHTBLUE">db_block_gets (pool '||name||')</td>' as name, '<td bgcolor="LIGHTBLUE" align=right>'||db_block_gets||'</td>','</tr>' from  v$buffer_pool_statistics;
+-- UNION
+select '<tr>','<td bgcolor="LIGHTBLUE">consistent_gets (pool '||name||')</td>' as name, '<td bgcolor="LIGHTBLUE" align=right>'||consistent_gets||'</td>','</tr>' from  v$buffer_pool_statistics;
+-- UNION
+select '<tr>','<td bgcolor="LIGHTBLUE">physical_reads (pool '||name||')</td>' as name, '<td bgcolor="LIGHTBLUE" align=right>'||physical_reads||'</td>','</tr>' from  v$buffer_pool_statistics;
+-- UNION ALL
 select '<tr>','<td bgcolor="WHITE" title="Ratio par pool ((db blocks gets+consistent gets)-physical reads)/(db blocks gets+consistent gets)">Ratio <b>v$buffer_pool_statistics</b> (pool '||name||')</td>' as name,'<td bgcolor="'||CouleurLimite(round(((db_block_gets+consistent_gets)-physical_reads)/(db_block_gets+consistent_gets),2)*100,70,10,0)||'" align=right>'||round(((db_block_gets+consistent_gets)-physical_reads)/(db_block_gets+consistent_gets),2)*100||' %</td>','</tr>'
 from v$buffer_pool_statistics;
 
