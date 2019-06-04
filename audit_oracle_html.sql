@@ -199,7 +199,7 @@ BEGIN
        where table_name='HISTAUDIT' AND owner='SYSTEM' AND column_name='MODIFIED';
       select count(column_name) into colval from dba_tab_columns
        where table_name='HISTAUDIT' AND owner='SYSTEM' AND column_name='VALEUR';
-      select data_length into collength from dba_tab_columns
+      select char_length into collength from dba_tab_columns
        where table_name='HISTAUDIT' and column_name='OBJ_NAME';
       IF colval>0 AND collength=255 THEN
          dbms_output.put_line('<td bgcolor="#33FF33">Table HISTAUDIT existante ');
@@ -214,6 +214,9 @@ BEGIN
 		  IF collength < 255 THEN
 		     EXECUTE IMMEDIATE 'alter table system.histaudit modify OBJ_NAME varchar2(255)';
 		     dbms_output.put_line('<td bgcolor="#FF0000">Modification table HISTAUDIT (col OBJ_NAME)');
+		  END IF;
+		  IF collength > 255 THEN
+		     dbms_output.put_line('<td bgcolor="#33FF33">Table HISTAUDIT existante ');
 		  END IF;
       END IF;
       IF tabtab = 'SYSAUX' OR tabtab = 'SYSTEM' THEN
@@ -406,7 +409,7 @@ select decode(sign(bytes/1024/1024 - 1) , -1, '0'||replace(to_char(bytes/1024/10
 
 select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where name in ('open_cursors','processes','compatible','remote_login_passwordfile','session','utl_file_dir','undo_retention')
 union
-select '<tr><td bgcolor="LIGHTBLUE">', au.name, '</td>', '<td bgcolor="'|| decode(lower(au.value), 'none', '#33FF33', 'ORANGE') || '">', decode(lower(au.value), 'os', au.value||' ('||aup.value||')', 'xml', au.value||' ('||aup.value||')', 'xml, extended', au.value||' ('||aup.value||')', au.value) || ' (table AUD$ = ' || &vaudcnt || ' rows - '|| trim(to_char(&vaudsze,'999G999G999G990D00')) ||' Mo)','</td>','</tr>' from v$parameter au, v$parameter aup where au.name='audit_trail' and aup.name='audit_file_dest';
+select '<tr><td bgcolor="LIGHTBLUE">', au.name, '</td>', '<td bgcolor="'|| decode(lower(au.value), 'none', '#33FF33', 'ORANGE') || '">', decode(lower(au.value), 'os', au.value||' ('||aup.value||')', 'xml', au.value||' ('||aup.value||')', 'xml, extended', au.value||' ('||aup.value||')', au.value) || ' (table AUD$ = ' || &vaudcnt || ' rows, '|| trim(to_char(&vaudsze,'999G999G999G990D00')) ||' Mo)','</td>','</tr>' from v$parameter au, v$parameter aup where au.name='audit_trail' and aup.name='audit_file_dest';
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (PARAMETRES INIT)
 delete from system.histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='INIT';
@@ -416,6 +419,10 @@ from v$parameter
   where ISDEFAULT='FALSE');
 
 -- *************************************** Modifies lors du dernier audit ?
+-- BUG TO RESOLVE
+-- if a parameter is resetted to Default, it disappears from parameter list. So, the request here
+-- says "AUCUN" + informs that a parameter was resetted.
+-- We need to add a test for missing parameter in actual list to avoid the message "AUCUN".
 prompt <tr>
 set define off
 prompt <td width=20%><b>Param&egrave;tres modifi&eacute;s <br/> depuis le dernier audit</b></td>
@@ -446,6 +453,9 @@ BEGIN
   else
      dbms_output.put_line('<td bgcolor="ORANGE">');
   end if;
+--  if cnt_init=0 then
+-- HERE TEST IF A PARAMETER WAS RESETTED TO DEFAULT
+--  end if;
 end;
 /
 
@@ -937,7 +947,7 @@ prompt )</b></td></tr>
 set define "&"
 select  '<tr>','<td bgcolor="LIGHTBLUE">TABLES</td>',
         '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',decode(a.total, NULL, '0,00', to_char(round(a.total,2),'99G999G990D00')),'</b></font></td>',
-        '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',decode(a.total, NULL, to_char(round(-l.total,2),'S99G999G990D000'), to_char(round(a.total-l.total,2),'S99G999G990D00')),'</b></font></td>','</tr>'
+        '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',decode(a.total, NULL, to_char(round(-l.total,2),'S99G999G990D00'), to_char(round(a.total-l.total,2),'S99G999G990D00')),'</b></font></td>','</tr>'
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type like 'TABLE%'
         and owner not in &sysusers and owner not in &exusers) a,
@@ -1156,7 +1166,7 @@ set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
-prompt " width="20" height="20" alt="Tips..." title="La d&eacute;tection des FULL SCANS est faite par le rapport entre les requ&ecirc;tes de lecture et les chargements des donn&eacute;es du disque (les blocs). Un ratio > 50% signifie qu&#39;un petit nombre de requ&ecirc;tes lisent un grand nombre de blocs, ce qui indique que les fichiers sont lus en entier trop fr&eacute;quemment."></td>
+prompt " width="20" height="20" alt="Tips..." title="La d&eacute;tection des FULL SCANS est faite par le rapport entre les demandes de lecture et les chargements des donn&eacute;es du disque (les blocs). Un ratio > 50% signifie qu&#39;un petit nombre de demandes chargent un grand nombre de blocs, ce qui indique que les tables sont lus en entier trop fr&eacute;quemment."></td>
 
 prompt <td align=center><font color="WHITE"><b>D&eacute;tection des FULL SCANs</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Read requests</b></td><td><b>Blocks read</b></td><td><b>ratio (% de full scans)</b></td></tr>

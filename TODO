@@ -12,7 +12,7 @@
 *
 * ******  KNOWN BUGS  ******
 * Some queries are not compatible with Oracle versions < 10. However the script is executed despite some errors.
-* 
+*  "Modifies lors du dernier audit ?" : see local note for a small bug if a parameter is resetted to default.
 *
 * ******   TODO LIST   ******
 *
@@ -23,6 +23,7 @@
 * GLOBAL IMPROVEMENTS (RELATIVE TO THE ENTIRE SCRIPT)
 -----------------------------------------------------
 * TODO : translation on the fly. To try : Init a variable LANG at the beginning of the script. Then, init variables TXT_[id of the sentence]_[LANG] with text translated. Finally, in the script for each text, use something like : "SELECT TXT_[id]_&LANG" (to be tested and validated)
+		 To think : change thousand separator in the same way ! Maybe just an environment variable when launching the script ?
 * TODO : force the creation of tablespace TOOLS (~100M) if not exist ?
 * TODO : USE VARIABLES AT THE BEGINNING OF THE SCRIPT FOR ALERT THRESHOLDS ?
 * TODO : Do a summary (HTML anchors). Frames or javascript ?
