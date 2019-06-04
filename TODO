@@ -12,7 +12,6 @@
 *
 * ******  KNOWN BUGS  ******
 * Some queries are not compatible with Oracle versions < 10. However the script is executed despite some errors.
-*  "Modifies lors du dernier audit ?" : see local note for a small bug if a parameter is resetted to default.
 *
 * ******   TODO LIST   ******
 *

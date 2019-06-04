@@ -419,10 +419,6 @@ from v$parameter
   where ISDEFAULT='FALSE');
 
 -- *************************************** Modifies lors du dernier audit ?
--- BUG TO RESOLVE
--- if a parameter is resetted to Default, it disappears from parameter list. So, the request here
--- says "AUCUN" + informs that a parameter was resetted.
--- We need to add a test for missing parameter in actual list to avoid the message "AUCUN".
 prompt <tr>
 set define off
 prompt <td width=20%><b>Param&egrave;tres modifi&eacute;s <br/> depuis le dernier audit</b></td>
@@ -438,6 +434,7 @@ BEGIN
   and trunc(to_date(H1.date_aud)) = trunc(sysdate)
   and to_date(H2.date_aud) = (select max(to_date(date_aud)) from system.histaudit
                            where to_date(date_aud) < trunc(sysdate));
+-- test if a parameter was initialized (ie added in the non-default parameters)
   if cnt_init=0 then
      select count(H1.obj_name) into cnt_init from system.histaudit H1
      where H1.type_obj = 'INIT'
@@ -448,14 +445,22 @@ BEGIN
                              where to_date(date_aud) < trunc(sysdate)))
      and trunc(to_date(H1.date_aud)) = trunc(sysdate);
   end if;
+-- test if a parameter was resetted (ie deleted from non-default parameters)
+  if cnt_init=0 then
+  select count(H2.obj_name) into cnt_init from system.histaudit H2
+     where H2.type_obj = 'INIT'
+     and to_date(H2.date_aud) = (select max(to_date(date_aud)) from system.histaudit
+                                 where to_date(date_aud) < trunc(sysdate))
+     and H2.obj_name not in
+        (select H1.obj_name from system.histaudit H1
+         where H1.type_obj = 'INIT'
+         and trunc(to_date(H1.date_aud)) = trunc(sysdate));
+  end if;
   if cnt_init=0 then
      dbms_output.put_line('<td bgcolor="#33FF33">AUCUN');
   else
      dbms_output.put_line('<td bgcolor="ORANGE">');
   end if;
---  if cnt_init=0 then
--- HERE TEST IF A PARAMETER WAS RESETTED TO DEFAULT
---  end if;
 end;
 /
 
