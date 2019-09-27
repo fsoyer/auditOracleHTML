@@ -34,7 +34,8 @@
 * LOCAL IMPROVEMENTS (RELATIVE TO EACH SECTION)
 -----------------------------------------------
 * *** Histaudit :
-* TODO : nettoyer historique > 1 an
+* TODO : cleanup histo table > 1 year ?
+		Put background to ORANGE on "UP Since" ("Up depuis le") if this date is greater than the last audit date (ie : the database was restarted SINCE the last audit)
 * *** Host :
 * BUG : la table v$osstat n'a pas toujours la stat "NUM_CPU_CORES". ligne vide renvoyée. A voir !
 * TODO : ajout stats systèmes SYSSTATS_MAIN ? Est-ce disponible sous la même forme sur toutes les versions depuis 10g ?

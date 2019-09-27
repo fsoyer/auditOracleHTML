@@ -277,7 +277,7 @@ end;
 /
 set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>H&ocirc;te (statistiques Oracle)</b></font></td></tr>
-prompt <tr><td bgcolor="WHITE"><b>Sockets (courants)</b></td><td bgcolor="WHITE"><b>CPUs (courants) / Coeurs (courants)</b></td><td bgcolor="WHITE"><b>Sockets (highwater)</b></td><td bgcolor="WHITE"><b>CPUs (highwater) / Cores (highwater)</b></td><td bgcolor="LIGHTGREY"></td></tr>
+prompt <tr><td bgcolor="WHITE"><b>Sockets (courants)</b></td><td bgcolor="WHITE"><b>CPUs logiques (courants) / Coeurs (courants)</b></td><td bgcolor="WHITE"><b>Sockets (highwater)</b></td><td bgcolor="WHITE"><b>CPUs logiques (highwater) / Cores (highwater)</b></td><td bgcolor="LIGHTGREY"></td></tr>
 set define "&"
 select '<td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_CURRENT,NULL,'-',CPU_SOCKET_COUNT_CURRENT), '</td><td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_CURRENT,' / ', decode(CPU_CORE_COUNT_CURRENT,NULL,'-',CPU_CORE_COUNT_CURRENT), '</td><td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_HIGHWATER,NULL,'-',CPU_SOCKET_COUNT_HIGHWATER), '</td><td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_HIGHWATER, ' / ', decode(CPU_CORE_COUNT_HIGHWATER,NULL,'-',CPU_CORE_COUNT_HIGHWATER), '</td><td bgcolor="LIGHTGREY"> </td></tr>' from v$license;
 -- *************************************** Usage hote
@@ -303,12 +303,12 @@ set define off
 
 -- Add <td> if no rows are returned (first audit)
 select decode(count(valeur), 0, '<tr><td bgcolor="LIGHTBLUE" colspan=5>')
- from histaudit
+ from system.histaudit
  where obj_name like 'Oracle Database%';
 -- else change bg color if version has changed
-select decode(banner, valeur, '<tr><td bgcolor="LIGHTBLUE" colspan=5>','<tr><td bgcolor="#FF0000" colspan=5><b>Version modifi&eacute;e depuis le dernier audit</b><br><br>') from v$version,histaudit where banner like 'Oracle Database%'
+select decode(banner, valeur, '<tr><td bgcolor="LIGHTBLUE" colspan=5>','<tr><td bgcolor="#FF0000" colspan=5><b>Version modifi&eacute;e depuis le dernier audit</b><br><br>') from v$version,system.histaudit where banner like 'Oracle Database%'
  and obj_name like 'Oracle Database%'
- and to_date(date_aud) = (select max(to_date(date_aud)) from histaudit where type_obj = 'VERS');
+ and to_date(date_aud) = (select max(to_date(date_aud)) from system.histaudit where type_obj = 'VERS');
 
 select banner,'<br>' from v$version;
 set define "&"
@@ -1881,6 +1881,7 @@ declare
   max_date       date;
   alert_text     alert_log_disk.text%type;
 --  last_alert_text alert_log_disk.text%type;
+  thisyear       char(4);
 
 begin
 -- find a starting date : last audit
@@ -1889,7 +1890,9 @@ begin
   select count(*) into rows_total from alert_log_disk;
   
   if (max_date is null) then
-    max_date := to_date('01-01-1980', 'dd-mm-yyyy');
+-- First audit. Extract messages from 01/01 of the current year
+    select extract(year from sysdate) into thisyear from dual;
+    max_date := to_date(concat('01-01-',thisyear), 'dd-mm-yyyy');
   end if;
   
   for r in (
@@ -2004,29 +2007,32 @@ prompt <tr><td width=20%><b>Date</b></td><td width=80%><b>Texte</b></td></tr>
 -- http://www.dba-oracle.com/t_writing_alert_log_message.htm
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',to_char(a.alert_date,'DD/MM/RR HH24:MI'),'</td>', '<td bgcolor="LIGHTBLUE">',a.alert_text,'</td>','</tr>'
-  from alert_log a,
-       (select max(to_date(date_aud)) date_aud from system.histaudit
-                where to_date(date_aud) < trunc(sysdate)) d
+--  from alert_log a,
+  from alert_log a
+--       (select max(to_date(date_aud)) date_aud from system.histaudit
+--                where to_date(date_aud) < trunc(sysdate)) d
  where (alert_text like '%ORA-%'
   or alert_text like '%TNS-%'
   or LOWER(alert_text) like '%checkpoint not complete%'
   or LOWER(alert_text) like '%create%' or LOWER(alert_text) like '%drop%' or LOWER(alert_text) like '%alter%'
   or LOWER(alert_text) like 'shutdown%' or LOWER(alert_text) like 'shutting down instance%')
-  and a.alert_date > d.date_aud
+--  and a.alert_date > d.date_aud
 order by a.alert_date;
 
 DECLARE cnt_obj number := 0;
 BEGIN
    select count(a.alert_date) into cnt_obj 
-   from alert_log a,
-        (select max(to_date(date_aud)) date_aud from system.histaudit
-               where to_date(date_aud) < trunc(sysdate)) d
+--   from alert_log a,
+   from alert_log a
+--        (select max(to_date(date_aud)) date_aud from system.histaudit
+--               where to_date(date_aud) < trunc(sysdate)) d
    where (alert_text like '%ORA-%'
      or alert_text like '%TNS-%'
      or LOWER(alert_text) like '%checkpoint not complete%'
      or LOWER(alert_text) like '%create%' or LOWER(alert_text) like '%drop%' or LOWER(alert_text) like '%alter%'
      or LOWER(alert_text) like '%shutdown%' or LOWER(alert_text) like '%shutting down%')
-     and a.alert_date > d.date_aud;
+;
+--     and a.alert_date > d.date_aud;
 
    if cnt_obj=0 then
       dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor=LIGHTGREY></td></tr>');
@@ -2084,6 +2090,7 @@ with err as (
    from
       dba_errors
    where sequence=1
+   and name not like 'BIN$%'
 )
 SELECT decode(n,-1,'<tr><td bgcolor="LIGHTBLUE">',''),text
   from (

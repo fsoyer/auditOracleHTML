@@ -14,8 +14,11 @@ For a wider understanding, I'll translate parts in french step by step.
 
 ----------------------------------
 # USAGE
-* ****** IMPORTANT : le script doit être lancé par sqlplus, en tant que SYSTEM ******
-* ****** IMPORTANT : un tablespace "TOOLS" doit exister dans la base pour la table d'audit ******
+* ****** IMPORTANT : this script must be executed under sqlplus, as SYSTEM ******
+* ** If SYSTEM access is not permitted, it needs to be executed by a user with right SELECT ANY DICTIONARY granted
+*    GRANT SELECT ANY DICTIONARY TO MyAuditUser;
+* ****** IMPORTANT : a tablespace "TOOLS" must exist in the database for an table of audit history ******
+
 * TNS :
 ```
  sqlplus -S system/manager@ORCL @/repertoire/audit_oracle_html > audit.html
