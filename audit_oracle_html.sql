@@ -1948,7 +1948,7 @@ begin
         into alert_date 
         from dual;
 
-      if (alert_date > max_date) then
+      if (to_date(alert_date, 'dd-mm-yyyy') > to_date(max_date, 'dd-mm-yyyy')) then
         start_updating := 1;
       end if;
     else
@@ -1969,7 +1969,7 @@ end;
 
 set serveroutput on 
 
--- détecter les messages en doublon et les compter
+-- TODO : détecter les messages en doublon et les compter
 -- utilisation d'un curseur plutôt qu'un simple FOR. Exemple :
 /*
  declare
@@ -2007,7 +2007,6 @@ prompt <tr><td width=20%><b>Date</b></td><td width=80%><b>Texte</b></td></tr>
 -- http://www.dba-oracle.com/t_writing_alert_log_message.htm
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',to_char(a.alert_date,'DD/MM/RR HH24:MI'),'</td>', '<td bgcolor="LIGHTBLUE">',a.alert_text,'</td>','</tr>'
---  from alert_log a,
   from alert_log a
 --       (select max(to_date(date_aud)) date_aud from system.histaudit
 --                where to_date(date_aud) < trunc(sysdate)) d
@@ -2021,8 +2020,7 @@ order by a.alert_date;
 
 DECLARE cnt_obj number := 0;
 BEGIN
-   select count(a.alert_date) into cnt_obj 
---   from alert_log a,
+   select count(a.alert_date) into cnt_obj
    from alert_log a
 --        (select max(to_date(date_aud)) date_aud from system.histaudit
 --               where to_date(date_aud) < trunc(sysdate)) d
