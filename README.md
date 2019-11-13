@@ -14,10 +14,12 @@ For a wider understanding, I'll translate parts from french to english step by s
 
 ----------------------------------
 # USAGE
-* ****** IMPORTANT : this script must be executed under sqlplus, as SYSTEM ******
-* ** If SYSTEM access is not permitted, it needs to be executed by a user with right SELECT ANY DICTIONARY granted
-*    GRANT SELECT ANY DICTIONARY TO MyAuditUser;
-* ****** IMPORTANT : a tablespace "TOOLS" must exist in the database for an table of audit history ******
+* IMPORTANT : this script must be executed under sqlplus, as SYSTEM
+  If SYSTEM access is not permitted, it needs to be executed by a user with right SELECT ANY DICTIONARY granted
+```
+    GRANT SELECT ANY DICTIONARY TO MyAuditUser;
+```
+* IMPORTANT : it's better if a tablespace "TOOLS" exists in the database for a table of audit history. If not, the table is created in tablespace SYSTEM.
 
 * TNS :
 ```
@@ -27,9 +29,9 @@ For a wider understanding, I'll translate parts from french to english step by s
 ```
  sqlplus -S system/manager@//server_oracle:1521/ORCL @/repertoire/audit_oracle_html > audit.html
 ```
-* "-S" = silently
-*
-* Exemple, sous linux, en utilisant des variables et Easyconnect :
+"-S" = silently
+
+* Example, under linux, with variables et Easyconnect :
 ```
  SQLP=/usr/lib/oracle/xe/app/oracle/product/10.2.0/client/scripts/sqlplus.sh
  AUDIT_SCRIPT=/scripts/Audit_Oracle/audit_complet_html
@@ -37,9 +39,8 @@ For a wider understanding, I'll translate parts from french to english step by s
  RAPPORT=audit.html
  $SQLP system/manager@$CONNEXION @$AUDIT_SCRIPT > $RAPPORT
 ```
-*
-* Pour info, script sqlplus.sh adapté pour linux (UTF8 et coupures de lignes)
-* nécessite l'outil rlwrap
+
+* Sample script sqlplus.sh adapted for linux (UTF8 et line breaks), needs the rlwrap tool
 ```
      #!/bin/bash
      export LD_LIBRARY_PATH=/<rép. Oracle Client>/OraHome_1
@@ -47,7 +48,7 @@ For a wider understanding, I'll translate parts from french to english step by s
      export EDITOR=vi
      NLS_LANG=FRENCH_FRANCE.UTF8 rlwrap -m $ORACLE_HOME/bin/sqlplus $1 $2 $3 $4 $5
 ```
-*
+
 ----------------------
 * Changelog :
 * 2005 v.1.0 Creation du script, regroupement d'operations manuelles repetitives.
