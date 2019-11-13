@@ -407,7 +407,7 @@ column audsze new_value vaudsze noprint
 select decode(sign(bytes/1024/1024 - 1) , -1, '0'||replace(to_char(bytes/1024/1024),',','.'),replace(to_char(bytes/1024/1024),',','.')) as audsze from dba_segments
   where owner = 'SYS' and segment_type='TABLE' and segment_name='AUD$';
 
-select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where name in ('open_cursors','processes','compatible','remote_login_passwordfile','session','utl_file_dir','undo_retention')
+select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where name in ('open_cursors','processes','compatible','remote_login_passwordfile','session','utl_file_dir','undo_retention','sec_case_sensitive_logon')
 union
 select '<tr><td bgcolor="LIGHTBLUE">', au.name, '</td>', '<td bgcolor="'|| decode(lower(au.value), 'none', '#33FF33', 'ORANGE') || '">', decode(lower(au.value), 'os', au.value||' ('||aup.value||')', 'xml', au.value||' ('||aup.value||')', 'xml, extended', au.value||' ('||aup.value||')', au.value) || ' (table AUD$ = ' || &vaudcnt || ' rows, '|| trim(to_char(&vaudsze,'999G999G999G990D00')) ||' Mo)','</td>','</tr>' from v$parameter au, v$parameter aup where au.name='audit_trail' and aup.name='audit_file_dest';
 
@@ -1761,13 +1761,13 @@ prompt <hr>
 prompt <div align=center><b><font color="WHITE">ALERT LOG</font></b></div>
 prompt <hr>
 
--- *************************************** Lecture du fichier alert.log
+-- *************************************** Read the alert.log file
 prompt <!-- ALERT.LOG -->
 
 define alert_length="2000"
 column nlsdate new_value _nlsdate noprint;
 -- column bdump   new_value _bdump noprint;
--- ici, "dbname" pris dans v$database au début ne fonctionne pas, il faut celui de v$instance.
+-- ### here, "dbname" taken in v$database at the beginning doesn't work, we need that of v$instance used in the alert_SID.log name.
 column db      new_value _db    noprint;
 
 select VALUE nlsdate from NLS_DATABASE_PARAMETERS where parameter = 'NLS_DATE_LANGUAGE';
@@ -1775,7 +1775,7 @@ select VALUE nlsdate from NLS_DATABASE_PARAMETERS where parameter = 'NLS_DATE_LA
 --   where name ='background_dump_dest';
 select instance_name db from v$instance;
 
--- *************************************** creation ou vidage de la table finale "alert_log"
+-- *************************************** create ou truncate final table "alert_log"
 prompt <!-- Creation des tables -->
 DECLARE
    table_exist number;
@@ -1805,7 +1805,7 @@ BEGIN
 END;
 /
 
--- *****************************************  external table alert_log_disk
+-- *****************************************  external table alert_log_disk (ak alert.log file)
 
 var sbdump varchar2(255);
 col sbdump new_value sbdump;
@@ -1875,7 +1875,7 @@ END;
 /
 
 -- ************************************ update table alert_log from alert_log_disk
--- A traiter :
+-- To be processed :
 --  declare * ERREUR à la ligne 1 : ORA-01653: unable to extend table SYSTEM.ALERT_LOG by 128 in tablespace TOOLS ORA-06512: at line 83
 
 declare
@@ -1907,7 +1907,6 @@ begin
      select text from alert_log_disk
      where text not like '%offlining%' 
        and text not like 'ARC_:%' 
---       and text not like '%LOG_ARCHIVE_DEST_1%'   -- test : est-ce que ça produit des faux-positifs de l'enlever ?
        and text not like '%Thread 1 advanced to log sequence%'
        and text not like '%Current log#%seq#%mem#%'
        and LOWER(text) not like 'alter system archive log%'
@@ -1936,26 +1935,28 @@ begin
        and LOWER(text) not like '%created oracle managed file%'
        and text not like 'ORA-21780 encountered when generating server alert SMG-3503%'
        and text not like 'Completed:%'
+       and text not like 'ORA-INFO::%'
   )
   loop
 
     isdate     := 0;
     alert_text := null;
 
+-- From char. 21 to 24 this can be a year. If yes (and we keep only the current year) it is a date, if not, it's any kind of text.
     select count(*) into isdate  
       from dual
      where substr(r.text, 21) in
       (to_char(sysdate, 'YYYY'), to_char(sysdate-365, 'YYYY'))
        and r.text not like '%cycle_run_year%';
--- Du car. 21 à 24 ça doit être une année. Si oui c'est une date, sinon, c'est un libellé quelconque.
     if (isdate = 1) then
--- prendre à partir du mois (car. 5) - forcer NLS en AMERICAN pour eviter les erreurs de conversion ? Tous les alert.log sont en AMERICAN ?
--- si besoin de prendre le NLS de la base, utiliser la variable "&_nlsdate" à la place d'"AMERICAN"
+-- from month (begin at char. 5) - force NLS in AMERICAN to avoid conversion errors ? Are all alert.log in AMERICAN ?
+-- If it's necessary to take the NLS of the database, use the variable "&_nlsdate" instead of "AMERICAN"
       select to_date(substr(r.text, 5),'Mon dd hh24:mi:ss rrrr','NLS_DATE_LANGUAGE = AMERICAN')
         into alert_date 
         from dual;
 
-      if (to_date(alert_date, 'dd-mm-yyyy') > to_date(max_date, 'dd-mm-yyyy')) then
+-- Keep only lines with a date >= max_date
+      if (to_date(alert_date, 'dd-mm-yyyy') >= to_date(max_date, 'dd-mm-yyyy')) then
         start_updating := 1;
       end if;
     else
@@ -1987,8 +1988,6 @@ begin
 end;
 /
 
-set serveroutput on 
-
 -- TODO : détecter les messages en doublon et les compter
 -- la méthode actuelle avec le "IF r.text not like.." ne fonctionne pas, car il faudrait que les messages d'un même jour soient consécutifs
 -- or, d'autres messages peuvent s'intercaler, cassant le comptage, même si lesdits messages ne sont pas affichés ensuite.
@@ -1998,7 +1997,31 @@ set serveroutput on
 -- 3. supprimer les occurences de ce jour sauf la 1 (par rapport à date et heure)
 -- 4. Mettre à jour la 1 avec le comptage
 -- NOTE : CA NE RESOUD PAS LE PROBLEME ORA-01653 SI TROP DE MESSAGES !!
---   Est-ce qu'on pourrait utiliser les curseurs sur le fichier ouvert avec UTL_FILE ?
+
+/*
+table external alert_log_disk
+curseur sur alert_log_disk
+compter les lignes identiques un même jour
+ 1 jours uniques
+ 2 imbriqué sur jour, compter lignes identiques checkpoint, etc
+PROBLEME ICI : LA DATE N'EST PAS SUR LA LIGNE ELLE-MEME ! Peut-on reconstruire une table de plus avec 2 col date+text (date ajoutée à chaque ligne de text), en évitant ORA-01653 ?
+
+garder date 1ere occurence et date de fin
+---> on ne peut pas modifier alert_log_disk car c'est le fichier ! => créer un 3eme table pour les garder ?
+LE ROWID EXISTE AUSSI SUR L'EXTERNAL TABLE
+on peut donc créer une table temporaire qui contient date + rowid
+
+1ere passe pour repérer les lignes de date avec leur rowid, on garde dates unique + rowid
+ensuite on peut selectionner les lignes entre rowid date 1 et rowid date 2 (en s'arrêtant au jour)
+select rowid,text from alert_log_disk where rowid > '(AAFFFwAAAAAAAAAAAAsVAg' and rowid < '(AAFFFwAAAAAAAAAAAAsVaQ';
+
+sur cette sélection, on compte les lignes identiques selon textes préétablis (checkpoint, tns...)
+en gardant date début et date fin
+
+remplir alert_log avec alert_log_disk ligne à ligne, sauf textes comptés ci-dessus
+check date : si date différente de date - 1 (changement de jour), chercher date dans 3eme table et l'insérer, puis charger les autres lignes de cette date
+*/
+
 -- Exemple curseur :
 /*
  declare
@@ -2032,6 +2055,7 @@ select to_char(round(&sbsize/1024/1024,2),'99G999G990D00') from dual;
 prompt Mb)</b></font></td></tr></table></td></tr>
 prompt <tr><td width=20%><b>Date</b></td><td width=80%><b>Texte</b></td></tr>
 
+set serveroutput on
 
 -- http://www.adp-gmbh.ch/ora/admin/scripts/read_alert_log.html
 -- http://www.adp-gmbh.ch/ora/admin/read_alert/index.html
@@ -2071,7 +2095,7 @@ end;
 
 prompt </table><br>
 
--- *************************************** Nettoyage des tables alert_log*
+-- *************************************** Cleaning of tables alert_log*
 prompt <!-- Nettoyage tables alert_log* -->
 DECLARE
    table_exist number;
