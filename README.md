@@ -1,16 +1,16 @@
 # auditOracleHTML
-Script to generate an Oracle (10g+) audit report of performances in HTML
+Script for generating an Oracle (10g+) audit report of performances in HTML
 ----------------------------------
-Freely inspired from internet shares (finally Google can be your friend, reasonably used).
+Freely inspired from internet tips, informations, shares, scripts.
 
 This script has been evolving since I checked Oracle databases. As a good geek, I spent a lot of time to instruct the machine to do what I repetitively manually did since the beginning.
 It is/will be probably not/never finished.
 
 All ideas, contributions, propositions, fixes, updates, are welcome.
 
-It is provided as is, use it at your own risks - but I use it since years on production databases without issues.
+It is provided as is, use it at your own risks - but I use it since years on production databases without issues. I've never identified any overload when using it in production.
 
-For a wider understanding, I'll translate parts from french to english step by step.
+For a wider understanding, I'll translate parts from french to english, step by step. Help will be welcome. Note that a TODO task consist in creating a (or using an existing) system to propose different languages for titles and texts.
 
 ----------------------------------
 # USAGE
