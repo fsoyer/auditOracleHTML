@@ -416,7 +416,12 @@ delete from system.histaudit where trunc(to_date(date_aud))=trunc(sysdate) and t
 insert into system.histaudit (
 select sysdate, 'INIT', substr(name,1,30), 0, 0, value
 from v$parameter
-  where ISDEFAULT='FALSE');
+  where ISDEFAULT='FALSE'
+  and name not like '%nls%');
+-- NLS parameters change in instance according to client config. We keep only database parameters.
+insert into system.histaudit (
+select sysdate, 'INIT', substr(parameter,1,30), 0, 0, value
+from nls_database_parameters);
 
 -- *************************************** Modifies lors du dernier audit ?
 prompt <tr>
@@ -706,7 +711,7 @@ where type_obj in ('TBS','FIL')
 and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
                             where to_date(date_aud) < trunc(sysdate))
 )
-select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') and dt.contents NOT IN ('UNDO') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b>(default)' END||'</td>' as tbs,
+select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') and dt.contents NOT IN ('UNDO') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b>(default tbs)' END||'</td>' as tbs,
  '<td bgcolor="'||CASE WHEN df.FILE_NAME NOT IN (select list_tbs.obj_name from list_tbs where type_obj='FIL') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||df.FILE_NAME||'</td>' as fname,
  '<td bgcolor="'||decode (CONTENTS,'UNDO','#33FF33',decode(autoextensible,'NO','#33FF33',CouleurLimite(sum(df.blocks)*&dbloc,(sum(df.maxbytes)-(sum(df.maxbytes)*0.20)),(sum(df.maxbytes)-(sum(df.maxbytes)*0.20))*0.10,1)))||'" align=right>'||decode(round(sum(df.bytes)/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.bytes)/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
  decode(autoextensible,'NO','<td bgcolor="#FF9900" align=right>OFF</td>','<td bgcolor="#33FF33" align=right>ON</td>') as autoext,
@@ -723,7 +728,7 @@ where type_obj in ('TBS','FIL')
 and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
                             where to_date(date_aud) < trunc(sysdate))
 )
-select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b>(default)' END||'</td>' as tbs,
+select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b>(default tmp)' END||'</td>' as tbs,
  '<td bgcolor="'||CASE WHEN FILE_NAME NOT IN (select list_tbs.obj_name from list_tbs where type_obj='FIL') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||FILE_NAME||'</td>' as fname,
  '<td bgcolor="#33FF33" align=right>'||decode(round(sum(df.blocks)*&dbloc/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.blocks)*&dbloc/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
  decode(autoextensible,'NO','<td bgcolor="#FF9900" align=right>OFF</td>', '<td bgcolor="#33FF33" align=right>ON</td>')as autoext,
@@ -757,7 +762,7 @@ WITH list_tbs AS (
 select distinct OBJ_NAME from system.histaudit where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
       where to_date(date_aud) < trunc(sysdate))
 )
-select '<tr>','<td bgcolor="'||CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">',CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END,t.tablespace_name,CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b>(default)' END,'</td>', '<td bgcolor="',decode(BIGFILE,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (BIGFILE,'YES','WHITE','BLACK'),'">', maxt.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">','<td bgcolor="#FF0000">'),maxt.status,'</td>',
+select '<tr>','<td bgcolor="'||CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">',CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END,t.tablespace_name,CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b>(default tbs)' END,'</td>', '<td bgcolor="',decode(BIGFILE,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (BIGFILE,'YES','WHITE','BLACK'),'">', maxt.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">','<td bgcolor="#FF0000">'),maxt.status,'</td>',
 --       '<td bgcolor="LIGHTBLUE" align=right>',decode(t.autoextensible,'NO',decode(t.total,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(t.total,'99G999G990D00')),decode(maxt.maxtotal,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(maxt.maxtotal,'99G999G990D00'))),'</td>' TOTAL,
        '<td bgcolor="LIGHTBLUE" align=right>',to_char(maxt.maxtotal,'99G999G990D00'),'</td>' TOTAL,
        '<td bgcolor="LIGHTBLUE" align=right>',decode(t.total,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(t.total,'99G999G990D00')),'</td>' TOTAL_CURRENT,
@@ -843,7 +848,7 @@ and t.tablespace_name=maxt.tablespace_name(+)
 and maxt.contents in ('UNDO');
 
 -- TABLESPACE TEMP
-select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END,ty.tablespace_name,CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b>(default)' END,'</td>','<td bgcolor="',decode(ty.bigfile,'YES','BLUE"','LIGHTBLUE"'),' align=center>','<font color="',decode(ty.bigfile,'YES','WHITE">','BLACK">'),ty.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',ty.contents,'</td>', decode(ty.status,'ONLINE','<td bgcolor="LIGHTBLUE">',ty.status,'</td>','<td bgcolor="#FF0000">',ty.status,'</td>'),
+select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END,ty.tablespace_name,CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b>(default tmp)' END,'</td>','<td bgcolor="',decode(ty.bigfile,'YES','BLUE"','LIGHTBLUE"'),' align=center>','<font color="',decode(ty.bigfile,'YES','WHITE">','BLACK">'),ty.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',ty.contents,'</td>', decode(ty.status,'ONLINE','<td bgcolor="LIGHTBLUE">',ty.status,'</td>','<td bgcolor="#FF0000">',ty.status,'</td>'),
          '<td bgcolor="LIGHTBLUE" align=right>',to_char(ty.maxtotal,'99G999G990D00'),'</td>' as maxtotal, 
          '<td bgcolor="LIGHTBLUE" align=right>',to_char(ty.total,'99G999G990D00'),'</td>' as total, 
          '<td bgcolor="LIGHTBLUE" align=right>0,00</td>' as utilise,
