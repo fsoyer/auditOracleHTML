@@ -239,7 +239,7 @@ set define "&"
 
 variable last_audit varchar2(100);
 begin
-      select decode(max(to_date(date_aud)),'','<font color="ORANGE"><b><i>Premier audit</i></b></font>',to_char(max(to_date(date_aud)),'DD-MON-YYYY',N'NLS_DATE_LANGUAGE = AMERICAN')) into :last_audit from system.histaudit
+      select decode(max(to_date(date_aud)),'','<font color="#FF0000"><b><i>Premier audit</i></b></font>',to_char(max(to_date(date_aud)),'DD-MON-YYYY',N'NLS_DATE_LANGUAGE = AMERICAN')) into :last_audit from system.histaudit
       where to_date(date_aud) < trunc(sysdate);
 end;
 /
@@ -426,7 +426,7 @@ from nls_database_parameters);
 -- *************************************** Modifies lors du dernier audit ?
 prompt <tr>
 set define off
-prompt <td width=20%><b>Param&egrave;tres modifi&eacute;s <br/> depuis le dernier audit</b></td>
+prompt <td width=20%><b>Param&egrave;tres modifi&eacute;s depuis le dernier audit</b></td>
 set define "&"
 
 DECLARE cnt_init number := 0;
@@ -711,7 +711,7 @@ where type_obj in ('TBS','FIL')
 and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
                             where to_date(date_aud) < trunc(sysdate))
 )
-select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') and dt.contents NOT IN ('UNDO') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b>(default tbs)' END||'</td>' as tbs,
+select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') and dt.contents NOT IN ('UNDO') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END||'</td>' as tbs,
  '<td bgcolor="'||CASE WHEN df.FILE_NAME NOT IN (select list_tbs.obj_name from list_tbs where type_obj='FIL') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||df.FILE_NAME||'</td>' as fname,
  '<td bgcolor="'||decode (CONTENTS,'UNDO','#33FF33',decode(autoextensible,'NO','#33FF33',CouleurLimite(sum(df.blocks)*&dbloc,(sum(df.maxbytes)-(sum(df.maxbytes)*0.20)),(sum(df.maxbytes)-(sum(df.maxbytes)*0.20))*0.10,1)))||'" align=right>'||decode(round(sum(df.bytes)/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.bytes)/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
  decode(autoextensible,'NO','<td bgcolor="#FF9900" align=right>OFF</td>','<td bgcolor="#33FF33" align=right>ON</td>') as autoext,
@@ -728,7 +728,7 @@ where type_obj in ('TBS','FIL')
 and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
                             where to_date(date_aud) < trunc(sysdate))
 )
-select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b>(default tmp)' END||'</td>' as tbs,
+select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b><i>(default tmp)</i>' END||'</td>' as tbs,
  '<td bgcolor="'||CASE WHEN FILE_NAME NOT IN (select list_tbs.obj_name from list_tbs where type_obj='FIL') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||FILE_NAME||'</td>' as fname,
  '<td bgcolor="#33FF33" align=right>'||decode(round(sum(df.blocks)*&dbloc/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.blocks)*&dbloc/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
  decode(autoextensible,'NO','<td bgcolor="#FF9900" align=right>OFF</td>', '<td bgcolor="#33FF33" align=right>ON</td>')as autoext,
@@ -762,7 +762,7 @@ WITH list_tbs AS (
 select distinct OBJ_NAME from system.histaudit where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
       where to_date(date_aud) < trunc(sysdate))
 )
-select '<tr>','<td bgcolor="'||CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">',CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END,t.tablespace_name,CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b>(default tbs)' END,'</td>', '<td bgcolor="',decode(BIGFILE,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (BIGFILE,'YES','WHITE','BLACK'),'">', maxt.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">','<td bgcolor="#FF0000">'),maxt.status,'</td>',
+select '<tr>','<td bgcolor="'||CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">',CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END,t.tablespace_name,CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END,'</td>', '<td bgcolor="',decode(BIGFILE,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (BIGFILE,'YES','WHITE','BLACK'),'">', maxt.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">','<td bgcolor="#FF0000">'),maxt.status,'</td>',
 --       '<td bgcolor="LIGHTBLUE" align=right>',decode(t.autoextensible,'NO',decode(t.total,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(t.total,'99G999G990D00')),decode(maxt.maxtotal,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(maxt.maxtotal,'99G999G990D00'))),'</td>' TOTAL,
        '<td bgcolor="LIGHTBLUE" align=right>',to_char(maxt.maxtotal,'99G999G990D00'),'</td>' TOTAL,
        '<td bgcolor="LIGHTBLUE" align=right>',decode(t.total,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(t.total,'99G999G990D00')),'</td>' TOTAL_CURRENT,
@@ -848,7 +848,7 @@ and t.tablespace_name=maxt.tablespace_name(+)
 and maxt.contents in ('UNDO');
 
 -- TABLESPACE TEMP
-select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END,ty.tablespace_name,CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b>(default tmp)' END,'</td>','<td bgcolor="',decode(ty.bigfile,'YES','BLUE"','LIGHTBLUE"'),' align=center>','<font color="',decode(ty.bigfile,'YES','WHITE">','BLACK">'),ty.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',ty.contents,'</td>', decode(ty.status,'ONLINE','<td bgcolor="LIGHTBLUE">',ty.status,'</td>','<td bgcolor="#FF0000">',ty.status,'</td>'),
+select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END,ty.tablespace_name,CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b><i>(default tmp)</i>' END,'</td>','<td bgcolor="',decode(ty.bigfile,'YES','BLUE"','LIGHTBLUE"'),' align=center>','<font color="',decode(ty.bigfile,'YES','WHITE">','BLACK">'),ty.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',ty.contents,'</td>', decode(ty.status,'ONLINE','<td bgcolor="LIGHTBLUE">',ty.status,'</td>','<td bgcolor="#FF0000">',ty.status,'</td>'),
          '<td bgcolor="LIGHTBLUE" align=right>',to_char(ty.maxtotal,'99G999G990D00'),'</td>' as maxtotal, 
          '<td bgcolor="LIGHTBLUE" align=right>',to_char(ty.total,'99G999G990D00'),'</td>' as total, 
          '<td bgcolor="LIGHTBLUE" align=right>0,00</td>' as utilise,
@@ -1415,9 +1415,10 @@ where a.obj_name=h.obj_name;
 prompt </table><br>
 
 -- *************************************** Pools memoire
+-- memory_target = sga_target + max(pga_aggregate_target, maximum PGA allocated)
 prompt <table border=1 width=100% bgcolor="WHITE">
 set define off
-prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>SGA Infos</b></font></td></tr>
+prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Infos SGA</b></font></td></tr>
 prompt <tr><td><b>Nom</b></td><td><b>Valeur (Mo)</b></td></tr>
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>vue V$SGAINFO (>=10g)</b></font></td></tr>
 set define "&"
@@ -1425,6 +1426,15 @@ select '<tr>','<td bgcolor="LIGHTBLUE">',name,'</td>' NOM,'<td bgcolor="LIGHTBLU
 -- Pour compatibilite avec 9i :
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>vue V$SGA (toutes versions)</b></font></td></tr>
 select '<tr>','<td bgcolor="LIGHTBLUE">',name,'</td>' NOM,'<td bgcolor="LIGHTBLUE" align=right>',to_char(round(value/(1024*1024),2),'99G999G990D00'),'</td>' valeur,'</tr>' from v$sga;
+prompt </table><br>
+
+-- MEMORY_TARGET_ADVICE
+prompt <table border=1 width=100% bgcolor="WHITE">
+set define off
+prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>Memory target advice</b></font></td></tr>
+prompt <tr><td><b>Memory size</b></td><td><b>Memory_target size factor</b></td><td><b>Estimated DB workload</b></td></tr>
+set define "&"
+select '<tr>','<td bgcolor="LIGHTBLUE">',decode(MEMORY_SIZE_FACTOR,1,'<b>',''),MEMORY_SIZE,decode(MEMORY_SIZE_FACTOR,1,'</b>',''),'</td>','<td bgcolor="LIGHTBLUE" align=right>',decode(MEMORY_SIZE_FACTOR,1,'<b>',''),to_char(MEMORY_SIZE_FACTOR,'990D00'),decode(MEMORY_SIZE_FACTOR,1,'</b>',''),'</td>','<td bgcolor="LIGHTBLUE" align=right>',decode(MEMORY_SIZE_FACTOR,1,'<b>',''),ESTD_DB_TIME,'</td>',decode(MEMORY_SIZE_FACTOR,1,'</b>',''),'</tr>' from v$memory_target_advice ORDER BY memory_size;
 prompt </table><br>
 
 -- *************************************** SHARED POOL
