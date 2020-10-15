@@ -1,6 +1,6 @@
 -- AUDIT BASES ORACLE
 -- v3.3
--- Compatible Oracle 10g, 11g, >
+-- Compatible Oracle 10g to 19c
 -- (c) 2005, Frank Soyer <frank.soyer@gmail.com>
 
 -- This program is free software; you can redistribute it and/or
@@ -92,7 +92,7 @@ define logfile = ORACLE
 define envfile = env
 -- ATTENTION : AUCUN ESPACE DANS LES LISTES, SINON LA VARIABLE EST TRONQUEE !
 define sysusers = ('SYS','SYSTEM','CTXSYS','DBSNMP','OUTLN','ORDSYS','ORDPLUGINS','MDSYS','DMSYS','WMSYS','WKSYS','OLAPSYS','SYSMAN','XDB','EXFSYS','TSMSYS','MGMT_VIEW','ORACLE_OCM','DIP','SI_INFORMTN_SCHEMA','ANONYMOUS')
-define exusers = ('SCOTT','HR','OE','PM','QS','QS_ADM','QS_CBADM','QS_CS','QS_ES','QS_OS','QS_WS','SH')
+define exusers = ('SCOTT','HR','OE','PM','QS','QS_ADM','QS_CBADM','QS_CS','QS_ES','QS_OS','QS_WS','SH','PERFAUDIT')
 -- Icones (base64)
 variable tips varchar2(4000);
 begin
@@ -152,6 +152,8 @@ prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>H
 prompt <tr><td width=20%><b>Table historique</b></td>
 --prompt <td bgcolor="LIGHTBLUE">
 set define off
+
+-- force sqlplus to exit on error
 WHENEVER sqlerror EXIT sql.sqlcode
 DECLARE
    tabhist number;
@@ -160,32 +162,34 @@ DECLARE
    colmodif number;
    colval number;
    collength number;
+   tbs_tools_absent EXCEPTION;
 
 BEGIN
    select count(table_name) into tabhist from dba_tables
-    where table_name='HISTAUDIT' and owner='SYSTEM';
+    where table_name='HISTAUDIT';
    select count(tablespace_name) into tabtools from dba_tablespaces
-    where tablespace_name like 'TOOLS';
+    where tablespace_name = 'TOOLS';
    IF tabhist > 0 THEN
       select tablespace_name into tabtab from dba_tables where table_name='HISTAUDIT';
    END IF;
 
    IF tabhist = 0 THEN
       IF tabtools = 0 THEN
-         dbms_output.put_line('<td bgcolor="#FF0000">Creation table HISTAUDIT tablespace SYSTEM...</br>');
-         dbms_output.put_line('Ajouter un tablespace <b>TOOLS</b> et y d&eacute;placer la table SYSTEM.HISTAUDIT</br>');
+--         dbms_output.put_line('<td bgcolor="#FF0000">Creation table HISTAUDIT tablespace SYSTEM...</br>');
+         dbms_output.put_line('<td bgcolor="#33FF33">Ajouter un tablespace <b>TOOLS</b> et y cr&eacute;er la table histaudit</br>');
+         raise_application_error(-20001,'Tablespace TOOLS does not exist');
 --         dbms_output.put_line('</td></tr></table>');
 --         raise_application_error(-20001,'Tablespace inexistant');
-         EXECUTE IMMEDIATE 'create table SYSTEM.histaudit
-                           (date_aud  date,
-                            type_obj varchar2(5),
-                            obj_name varchar2(255),
-                            total number,
-                            utilis number,
-                            VALEUR varchar2(255))';
+--         EXECUTE IMMEDIATE 'create table histaudit
+--                           (date_aud  date,
+--                            type_obj varchar2(5),
+--                            obj_name varchar2(255),
+--                            total number,
+--                            utilis number,
+--                            VALEUR varchar2(255))';
       ELSE
          dbms_output.put_line('<td bgcolor="#33FF33">Creation table HISTAUDIT tablespace TOOLS...<br>');
-         EXECUTE IMMEDIATE 'create table SYSTEM.histaudit
+         EXECUTE IMMEDIATE 'create table histaudit
                            (date_aud  date,
                             type_obj varchar2(5),
                             obj_name varchar2(255),
@@ -193,12 +197,13 @@ BEGIN
                             utilis number,
                             VALEUR varchar2(255))
                           TABLESPACE TOOLS';
+         EXECUTE IMMEDIATE 'create or replace public synonym histaudit for histaudit';
       END IF;
    ELSE
       select count(column_name) into colmodif from dba_tab_columns
-       where table_name='HISTAUDIT' AND owner='SYSTEM' AND column_name='MODIFIED';
+       where table_name='HISTAUDIT' AND column_name='MODIFIED';
       select count(column_name) into colval from dba_tab_columns
-       where table_name='HISTAUDIT' AND owner='SYSTEM' AND column_name='VALEUR';
+       where table_name='HISTAUDIT' AND column_name='VALEUR';
       select char_length into collength from dba_tab_columns
        where table_name='HISTAUDIT' and column_name='OBJ_NAME';
       IF colval>0 AND collength=255 THEN
@@ -206,40 +211,42 @@ BEGIN
       ELSE
 		  IF colval=0 THEN
 		     IF colmodif>0 THEN
-		        EXECUTE IMMEDIATE 'alter table system.histaudit drop column MODIFIED';
+		        EXECUTE IMMEDIATE 'alter table histaudit drop column MODIFIED';
 		     END IF;
-		     EXECUTE IMMEDIATE 'alter table system.histaudit add VALEUR varchar2(255)';
+		     EXECUTE IMMEDIATE 'alter table histaudit add VALEUR varchar2(255)';
 		     dbms_output.put_line('<td bgcolor="#FF0000">Modification table HISTAUDIT (col VALEUR)');
 		  END IF;
 		  IF collength < 255 THEN
-		     EXECUTE IMMEDIATE 'alter table system.histaudit modify OBJ_NAME varchar2(255)';
+		     EXECUTE IMMEDIATE 'alter table histaudit modify OBJ_NAME varchar2(255)';
 		     dbms_output.put_line('<td bgcolor="#FF0000">Modification table HISTAUDIT (col OBJ_NAME)');
 		  END IF;
 		  IF collength > 255 THEN
 		     dbms_output.put_line('<td bgcolor="#33FF33">Table HISTAUDIT existante ');
 		  END IF;
       END IF;
-      IF tabtab = 'SYSAUX' OR tabtab = 'SYSTEM' THEN
+      IF tabtab <> 'TOOLS' THEN
          dbms_output.put_line('(tablespace '||tabtab||')<br>');
-         dbms_output.put_line('Ajouter un tablespace <b>TOOLS</b> et y d&eacute;placer la table '||tabtab||'.HISTAUDIT</br>');
+         dbms_output.put_line('D&eacute;placer la table HISTAUDIT dans un tablespace <b>TOOLS</b>.');
+         raise_application_error(-20002,'Tablespace TOOLS does not exist');
       ELSE
          dbms_output.put_line('(tablespace '||tabtab||')<br>');
       END IF;
    END IF;
 END;
 /
+-- now avoid sqlplus to exit
 WHENEVER sqlerror CONTINUE;
 
 prompt </td></tr>
 prompt <tr><td width=20%><b>Pr&eacute;c&eacute;dent audit</b></td>
 prompt <td bgcolor="LIGHTBLUE">
--- select decode(max(to_date(date_aud)),'','N/A',max(to_date(date_aud))) from system.histaudit
+-- select decode(max(to_date(date_aud)),'','N/A',max(to_date(date_aud))) from histaudit
 --       where to_date(date_aud) < trunc(sysdate);
 set define "&"
 
 variable last_audit varchar2(100);
 begin
-      select decode(max(to_date(date_aud)),'','<font color="#FF0000"><b><i>Premier audit</i></b></font>',to_char(max(to_date(date_aud)),'DD-MON-YYYY',N'NLS_DATE_LANGUAGE = AMERICAN')) into :last_audit from system.histaudit
+      select decode(max(to_date(date_aud)),'','<font color="#FF0000"><b><i>Premier audit</i></b></font>',to_char(max(to_date(date_aud)),'DD-MON-YYYY',N'NLS_DATE_LANGUAGE = AMERICAN')) into :last_audit from histaudit
       where to_date(date_aud) < trunc(sysdate);
 end;
 /
@@ -284,38 +291,38 @@ select '<td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_CURRENT,
 set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Usage CPU (valeurs instantan&eacute;es)</b></font></td></tr>
 set define "&"
+-- TODO : améliorer la requête ci-dessous VOIR : http://www.oracle.com/technetwork/articles/schumacher-analysis-099313.html
 select '<tr><td bgcolor="LIGHTBLUE" colspan=2>', metric_name, '</td><td bgcolor="LIGHTBLUE" align=right colspan=3>', round(value,2), '%</td></tr>'
 from SYS.V_$SYSMETRIC
 where METRIC_NAME IN ('Database CPU Time Ratio', 'Database Wait Time Ratio')
 AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC)
 Order by 2 asc;
--- TODO : améliorer la requête ci-dessus VOIR : http://www.oracle.com/technetwork/articles/schumacher-analysis-099313.html
 
 prompt </td></tr>
 prompt </table>
 prompt <br>
 
 -- *************************************** Versions
-delete from system.histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='VERS';
+delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='VERS';
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Versions</b></font></td></tr>
 set define off
 
 -- Add <td> if no rows are returned (first audit)
 select decode(count(valeur), 0, '<tr><td bgcolor="LIGHTBLUE" colspan=5>')
- from system.histaudit
+ from histaudit
  where obj_name like 'Oracle Database%';
 -- else change bg color if version has changed
-select decode(banner, valeur, '<tr><td bgcolor="LIGHTBLUE" colspan=5>','<tr><td bgcolor="#FF0000" colspan=5><b>Version modifi&eacute;e depuis le dernier audit</b><br><br>') from v$version,system.histaudit where banner like 'Oracle Database%'
+select decode(banner, valeur, '<tr><td bgcolor="LIGHTBLUE" colspan=5>','<tr><td bgcolor="#FF0000" colspan=5><b>Version modifi&eacute;e depuis le dernier audit</b><br><br>') from v$version,histaudit where banner like 'Oracle Database%'
  and obj_name like 'Oracle Database%'
- and to_date(date_aud) = (select max(to_date(date_aud)) from system.histaudit where type_obj = 'VERS');
+ and to_date(date_aud) = (select max(to_date(date_aud)) from histaudit where type_obj = 'VERS');
 
 select banner,'<br>' from v$version;
 set define "&"
 prompt </td></tr>
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (VERSION)
-insert into system.histaudit (
+insert into histaudit (
 select sysdate, 'VERS', 'Oracle Database', 0, 0, banner
 from v$version
   where banner like 'Oracle Database%');
@@ -407,19 +414,30 @@ column audsze new_value vaudsze noprint
 select decode(sign(bytes/1024/1024 - 1) , -1, '0'||replace(to_char(bytes/1024/1024),',','.'),replace(to_char(bytes/1024/1024),',','.')) as audsze from dba_segments
   where owner = 'SYS' and segment_type='TABLE' and segment_name='AUD$';
 
-select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where name in ('open_cursors','processes','compatible','remote_login_passwordfile','session','utl_file_dir','undo_retention','sec_case_sensitive_logon','diagnostic_dest')
+select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where name in
+('control_files',
+'open_cursors',
+'processes',
+'compatible',
+'remote_login_passwordfile',
+'session',
+'utl_file_dir',
+'undo_retention',
+'sec_case_sensitive_logon',
+'diagnostic_dest',
+'db_cache_advice')
 union
 select '<tr><td bgcolor="LIGHTBLUE">', au.name, '</td>', '<td bgcolor="'|| decode(lower(au.value), 'none', '#33FF33', 'ORANGE') || '">', decode(lower(au.value), 'os', au.value||' ('||aup.value||')', 'xml', au.value||' ('||aup.value||')', 'xml, extended', au.value||' ('||aup.value||')', au.value) || ' (table AUD$ = ' || &vaudcnt || ' rows, '|| trim(to_char(&vaudsze,'999G999G999G990D00')) ||' Mo)','</td>','</tr>' from v$parameter au, v$parameter aup where au.name='audit_trail' and aup.name='audit_file_dest';
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (PARAMETRES INIT)
-delete from system.histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='INIT';
-insert into system.histaudit (
+delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='INIT';
+insert into histaudit (
 select sysdate, 'INIT', substr(name,1,30), 0, 0, value
 from v$parameter
   where ISDEFAULT='FALSE'
   and name not like '%nls%');
 -- NLS parameters change in instance according to client config. We keep only database parameters.
-insert into system.histaudit (
+insert into histaudit (
 select sysdate, 'INIT', substr(parameter,1,30), 0, 0, value
 from nls_database_parameters);
 
@@ -431,33 +449,33 @@ set define "&"
 
 DECLARE cnt_init number := 0;
 BEGIN
-  select count(H1.obj_name) into cnt_init from system.histaudit H1, system.histaudit H2
+  select count(H1.obj_name) into cnt_init from histaudit H1, histaudit H2
   where H1.obj_name = H2.obj_name
   and H1.type_obj = 'INIT'
   and H2.type_obj = 'INIT'
   and H1.valeur <> H2.valeur
   and trunc(to_date(H1.date_aud)) = trunc(sysdate)
-  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from system.histaudit
+  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from histaudit
                            where to_date(date_aud) < trunc(sysdate));
 -- test if a parameter was initialized (ie added in the non-default parameters)
   if cnt_init=0 then
-     select count(H1.obj_name) into cnt_init from system.histaudit H1
+     select count(H1.obj_name) into cnt_init from histaudit H1
      where H1.type_obj = 'INIT'
      and H1.obj_name not in
-        (select H2.obj_name from system.histaudit H2
+        (select H2.obj_name from histaudit H2
          where H2.type_obj = 'INIT'
-         and to_date(H2.date_aud) = (select max(to_date(date_aud)) from system.histaudit
+         and to_date(H2.date_aud) = (select max(to_date(date_aud)) from histaudit
                              where to_date(date_aud) < trunc(sysdate)))
      and trunc(to_date(H1.date_aud)) = trunc(sysdate);
   end if;
 -- test if a parameter was resetted (ie deleted from non-default parameters)
   if cnt_init=0 then
-  select count(H2.obj_name) into cnt_init from system.histaudit H2
+  select count(H2.obj_name) into cnt_init from histaudit H2
      where H2.type_obj = 'INIT'
-     and to_date(H2.date_aud) = (select max(to_date(date_aud)) from system.histaudit
+     and to_date(H2.date_aud) = (select max(to_date(date_aud)) from histaudit
                                  where to_date(date_aud) < trunc(sysdate))
      and H2.obj_name not in
-        (select H1.obj_name from system.histaudit H1
+        (select H1.obj_name from histaudit H1
          where H1.type_obj = 'INIT'
          and trunc(to_date(H1.date_aud)) = trunc(sysdate));
   end if;
@@ -470,32 +488,32 @@ end;
 /
 
 select H1.obj_name, ' (', H2.valeur, ' -> ', H1.valeur, ')<br>' -- parametres modifies
-from system.histaudit H1, system.histaudit H2
+from histaudit H1, histaudit H2
   where H1.obj_name = H2.obj_name
   and H1.type_obj = 'INIT'
   and H2.type_obj = 'INIT'
   and H1.valeur <> H2.valeur
   and trunc(to_date(H1.date_aud)) = trunc(sysdate)
-  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from system.histaudit
+  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from histaudit
                            where to_date(date_aud) < trunc(sysdate))
 UNION
 select H1.obj_name, ' (', '<b>New</b>', ' -> ', H1.valeur, ')<br>' -- nouveaux parametres
-from system.histaudit H1
+from histaudit H1
   where H1.type_obj = 'INIT'
   and H1.obj_name not in
-      (select H2.obj_name from system.histaudit H2
+      (select H2.obj_name from histaudit H2
        where H2.type_obj = 'INIT'
-       and to_date(H2.date_aud) = (select max(to_date(date_aud)) from system.histaudit
+       and to_date(H2.date_aud) = (select max(to_date(date_aud)) from histaudit
                            where to_date(date_aud) < trunc(sysdate)))
   and trunc(to_date(H1.date_aud)) = trunc(sysdate)
 UNION
 select H1.obj_name, ' (', H1.valeur, ' -> ', '<b>Default</b>', ')<br>' -- parametres réinitialises au defaut
-from (select * from system.histaudit H
+from (select * from histaudit H
       where H.type_obj = 'INIT'
-       and to_date(H.date_aud) = (select max(to_date(date_aud)) from system.histaudit
+       and to_date(H.date_aud) = (select max(to_date(date_aud)) from histaudit
                                   where to_date(date_aud) < trunc(sysdate))) H1
 where H1.obj_name not in
-(select H2.obj_name from system.histaudit H2
+(select H2.obj_name from histaudit H2
  where H2.type_obj = 'INIT'
  and trunc(to_date(H2.date_aud)) = trunc(sysdate))
 order by 1;
@@ -622,8 +640,8 @@ prompt <div align=center><b><font color="WHITE">SECTION STOCKAGE</font></b></div
 prompt <hr>
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (TABLESPACES ET SEGMENTS)
-delete from system.histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TBS';
-insert into system.histaudit (
+delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TBS';
+insert into histaudit (
 select sysdate, 'TBS', t.tablespace_name, t.total, 
          decode(u.utilise,'',0,u.utilise), 0
 from (select df.tablespace_name,
@@ -654,32 +672,32 @@ from (select tablespace_name,
       from dba_temp_files
       group by tablespace_name));
 
-delete from system.histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='FIL';
-insert into system.histaudit (
+delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='FIL';
+insert into histaudit (
 select sysdate, 'FIL', file_name, 0, 0, 0
       from dba_data_files);
-insert into system.histaudit (
+insert into histaudit (
 select sysdate, 'FIL', file_name, 0, 0, 0
       from dba_temp_files);
 
-delete from system.histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TAB';
-insert into system.histaudit (
+delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TAB';
+insert into histaudit (
 select sysdate, 'TAB', 'Total segments tables', total, 
          0, 0
 from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(1024*1024),2)) total
       from dba_segments
       where segment_type like 'TABLE%'
       and owner not in &sysusers and owner not in &exusers));
-delete from system.histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='IND';
-insert into system.histaudit (
+delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='IND';
+insert into histaudit (
 select sysdate, 'IND', 'Total segments indexes', total, 
          0, 0
 from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(1024*1024),2)) total
       from dba_segments
       where segment_type like 'INDEX%'
       and owner not in &sysusers and owner not in &exusers));
-delete from system.histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='AUT';
-insert into system.histaudit (
+delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='AUT';
+insert into histaudit (
 select sysdate, 'AUT', 'Total segments autres', total, 
          0, 0
 from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(1024*1024),2)) total
@@ -706,9 +724,9 @@ prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Taille (Mo)</
 set define "&"
 
 WITH list_tbs AS (
-select distinct OBJ_NAME,TYPE_OBJ from system.histaudit
+select distinct OBJ_NAME,TYPE_OBJ from histaudit
 where type_obj in ('TBS','FIL')
-and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
                             where to_date(date_aud) < trunc(sysdate))
 )
 select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') and dt.contents NOT IN ('UNDO') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END||'</td>' as tbs,
@@ -723,9 +741,9 @@ where df.tablespace_name=dt.tablespace_name(+)
 group by df.tablespace_name, df.file_name, autoextensible, contents, bigfile
 order by 2,3;
 WITH list_tbs AS (
-select distinct OBJ_NAME,TYPE_OBJ from system.histaudit
+select distinct OBJ_NAME,TYPE_OBJ from histaudit
 where type_obj in ('TBS','FIL')
-and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
                             where to_date(date_aud) < trunc(sysdate))
 )
 select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b><i>(default tmp)</i>' END||'</td>' as tbs,
@@ -759,7 +777,7 @@ prompt <tr><td><b>Tablespace</b></td><td><b>Bigfile</b></td><td><b>Contenu</b></
 set define "&"
 -- TABLESPACES DATAS
 WITH list_tbs AS (
-select distinct OBJ_NAME from system.histaudit where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+select distinct OBJ_NAME from histaudit where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
       where to_date(date_aud) < trunc(sysdate))
 )
 select '<tr>','<td bgcolor="'||CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">',CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END,t.tablespace_name,CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END,'</td>', '<td bgcolor="',decode(BIGFILE,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (BIGFILE,'YES','WHITE','BLACK'),'">', maxt.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">','<td bgcolor="#FF0000">'),maxt.status,'</td>',
@@ -800,13 +818,13 @@ from (select tablespace_name,
              round(sum(blocks)*&dbloc/(1024*1024),2) libre
       from dba_free_space
       group by tablespace_name) l,
-      (select * from system.histaudit
+      (select * from histaudit
          where trunc(to_date(date_aud))=trunc(sysdate)
          and type_obj='TBS') a,
-      (select * from system.histaudit
+      (select * from histaudit
          where to_date(date_aud) like
-        (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
-            where to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+        (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
+            where to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
       where to_date(date_aud) < trunc(sysdate))
             and type_obj='TBS')
          and type_obj='TBS') h
@@ -910,12 +928,12 @@ from
      
 select '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',to_char(round(sum(a.total-h.total)),'S99G999G990D00'),'</b></font></td>' as total, 
         '<td bgcolor="BLUE" align=right colspan=4><font color="WHITE"><b>',to_char(round(sum(a.utilis-h.utilis)),'S99G999G990D00'),'</b></font></td>' as utilise,'</tr>'
-from (select * from system.histaudit
+from (select * from histaudit
 	where trunc(to_date(date_aud))=trunc(sysdate)
         and type_obj='TBS') a,
-(select * from system.histaudit
+(select * from histaudit
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='TBS')
 	and type_obj='TBS') h
@@ -932,13 +950,13 @@ DECLARE
  v_res varchar2(255);
  v_sql varchar2(2000);
 BEGIN
-   select count(OBJ_NAME) into tbsremoved_cnt from system.histaudit
-     where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit where to_date(date_aud) < trunc(sysdate))
+   select count(OBJ_NAME) into tbsremoved_cnt from histaudit
+     where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit where to_date(date_aud) < trunc(sysdate))
      and OBJ_NAME not in (select tablespace_name from dba_tablespaces);
    if tbsremoved_cnt > 0 then
      v_sql := 'SELECT ''<tr><td bgcolor="ORANGE">''||OBJ_NAME||''</td></tr>''
-      FROM system.histaudit
-        where type_obj=''TBS'' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit where to_date(date_aud) < trunc(sysdate))
+      FROM histaudit
+        where type_obj=''TBS'' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit where to_date(date_aud) < trunc(sysdate))
       and OBJ_NAME not in (select tablespace_name from dba_tablespaces) ';
      dbms_output.put_line('<table border=1 width=100% bgcolor="WHITE"><tr><td bgcolor="#3399CC" align=center><font color="WHITE"><b>Tablespace(s) supprim&eacute;(s) depuis le dernier audit</b></font></td></tr>');
      open v_cur for v_sql;
@@ -972,9 +990,9 @@ select  '<tr>','<td bgcolor="LIGHTBLUE">TABLES</td>',
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type like 'TABLE%'
         and owner not in &sysusers and owner not in &exusers) a,
-(select * from system.histaudit
+(select * from histaudit
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='TAB')
 	and type_obj='TAB') l;
@@ -984,9 +1002,9 @@ select  '<tr>','<td bgcolor="LIGHTBLUE">INDEXES</td>',
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type like 'INDEX%'
         and owner not in &sysusers and owner not in &exusers) a,
-(select * from system.histaudit
+(select * from histaudit
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='IND')
 	and type_obj='IND') l;
@@ -996,9 +1014,9 @@ select DISTINCT '<tr>','<td bgcolor="LIGHTBLUE">AUTRES (LOB SEGMENTS, LOB INDEXE
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type not like 'TABLE%' and segment_type not like 'INDEX%'
         and owner not in &sysusers and owner not in &exusers) a,
-(select * from system.histaudit
+(select * from histaudit
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
                 where trunc(to_date(date_aud)) < trunc(sysdate)
                 and type_obj='AUT')
 	and type_obj='AUT') l;
@@ -1366,19 +1384,19 @@ set define "&"
 prompt </table><br>
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE
-delete from system.histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='SGA';
-insert into system.histaudit (
+delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='SGA';
+insert into histaudit (
 select sysdate,'SGA','sga_size (spfile/max_used)',total,valeur,0 from 
 (select round(value/(1024*1024),2) total from v$parameter where name = 'sga_max_size') p,
 (select round(sum(bytes)/(1024*1024),2) valeur from v$sgastat) s
 );
-insert into system.histaudit (
+insert into histaudit (
 select sysdate, 'SGA', 'shared_pool (spfile/used)', t.Shared_pool_size, u.utilise, 0
 from (select name, round(value/(1024*1024),2) Shared_pool_size
       from v$parameter where name='shared_pool_size') t,
      (select round(sum(bytes)/(1024*1024),2) Utilise
       from v$sgastat where pool='shared pool' and name <> 'free memory') u);
-insert into system.histaudit (
+insert into histaudit (
 select sysdate,'SGA','buffer_cache',round(value/(1024*1024),2), 0, 0 from v$sga
 where name = 'Database Buffers');
 
@@ -1401,12 +1419,12 @@ decode(SIGN(a.utilis-h.utilis),
        0,'<td bgcolor="LIGHTBLUE" align=right>'||to_char(a.utilis-h.utilis,'99G999G990D00')||'</td>',
        1,'<td bgcolor="ORANGE" align=right>'||to_char(a.utilis-h.utilis,'S99G999G990D00')||'</td>') UTILISE,'</tr>'
 from
-(select * from system.histaudit
+(select * from histaudit
 	where trunc(to_date(date_aud))=trunc(sysdate)
 and type_obj='SGA') a,
-(select * from system.histaudit
+(select * from histaudit
 	where to_date(date_aud) like
-	(select max(to_date(date_aud)) from system.histaudit
+	(select max(to_date(date_aud)) from histaudit
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='SGA')
 	and type_obj='SGA') h
@@ -1429,12 +1447,65 @@ select '<tr>','<td bgcolor="LIGHTBLUE">',name,'</td>' NOM,'<td bgcolor="LIGHTBLU
 prompt </table><br>
 
 -- MEMORY_TARGET_ADVICE
+-- tableau "advice" de prédiction des perfs selon tailles de cache
+-- http://pages.di.unipi.it/ghelli/didattica/bdldoc/B19306_01/server.102/b14211/memory.htm#i29118
+-- !! si DB_CACHE_ADVICE est ON
+
+-- TODO : renommer les variables v_res* pour refléter ce qu'elles contiennent
+--        détecter le *_SIZE_FACTOR=1 pour garder la valeur ESTD_DB_TIME. Ensuite, si un ESTD_DB_TIME est inférieur à celui-ci, changer le background en orange (en modifiant la couleur dans v_res1, v_res3, v_res5
+--        Mettre la ligne SIZE_FACTOR=1 dans une autre couleur ? Bleu légèrement plus sombre ?
+
 prompt <table border=1 width=100% bgcolor="WHITE">
 set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>Memory target advice</b></font></td></tr>
 prompt <tr><td><b>Memory size</b></td><td><b>Memory_target size factor</b></td><td><b>Estimated DB workload</b></td></tr>
 set define "&"
-select '<tr>','<td bgcolor="LIGHTBLUE">',decode(MEMORY_SIZE_FACTOR,1,'<b>',''),MEMORY_SIZE,decode(MEMORY_SIZE_FACTOR,1,'</b>',''),'</td>','<td bgcolor="LIGHTBLUE" align=right>',decode(MEMORY_SIZE_FACTOR,1,'<b>',''),to_char(MEMORY_SIZE_FACTOR,'990D00'),decode(MEMORY_SIZE_FACTOR,1,'</b>',''),'</td>','<td bgcolor="LIGHTBLUE" align=right>',decode(MEMORY_SIZE_FACTOR,1,'<b>',''),ESTD_DB_TIME,'</td>',decode(MEMORY_SIZE_FACTOR,1,'</b>',''),'</tr>' from v$memory_target_advice ORDER BY memory_size;
+
+DECLARE
+ v_res1 varchar2(2000);
+ v_res2 varchar2(2000);
+ v_res3 varchar2(2000);
+ v_res4 varchar2(2000);
+ v_res5 varchar2(2000);
+ v_res6 varchar2(2000);
+ v_res7 varchar2(2000);
+
+ cnt_line number := 0;
+ db_advice number := 0;
+ memory_target number := 0;
+ v_cur SYS_REFCURSOR;
+ v_sql varchar2(2000);
+-- use $IF $THEN $END for pl/sql conditional compilation
+BEGIN
+  $IF dbms_db_version.version >= 11 $THEN
+    select count(*) into cnt_line from v$memory_target_advice;
+    select decode(value, 'ON', 1, 0) into db_advice from v$parameter where name='db_cache_advice';
+    select value into memory_target from v$parameter where name='memory_target';
+    if (memory_target > 0 and cnt_line=0) or db_advice=0 then
+      select '<tr><td bgcolor="LIGHTGREY"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor="LIGHTGREY"></td><td bgcolor="LIGHTGREY"></td></tr>' into v_res1 from dual;
+      dbms_output.put_line(v_res1);
+    else
+      if memory_target=0 then -- if parameter MEMORY_TARGET is not initialized, display SGA stats instead
+        v_sql := 'select ''<tr>''||''<td bgcolor="LIGHTBLUE">''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),SGA_SIZE,decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="LIGHTBLUE" align=right>''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),to_char(SGA_SIZE_FACTOR,''990D00''),decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="LIGHTBLUE" align=right>''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),ESTD_DB_TIME,''</td>''||decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</tr>'' from v$sga_target_advice ORDER BY 2';
+      else
+        v_sql := 'select ''<tr>''||''<td bgcolor="LIGHTBLUE">''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),MEMORY_SIZE,decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="LIGHTBLUE" align=right>''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),to_char(MEMORY_SIZE_FACTOR,''990D00''),decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="LIGHTBLUE" align=right>''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),ESTD_DB_TIME,''</td>''||decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</tr>'' from v$memory_target_advice ORDER BY 2';
+      end if;
+      open v_cur for v_sql;
+      loop
+        fetch v_cur into v_res1, v_res2, v_res3, v_res4, v_res5, v_res6, v_res7 ;
+        EXIT WHEN v_cur%NOTFOUND;
+        dbms_output.put_line(v_res1||v_res2||v_res3||v_res4||v_res5||v_res6||v_res7);
+     end loop;
+    end if;
+  $ELSE
+    select '<tr><td bgcolor="LIGHTGREY"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor="LIGHTGREY"></td><td bgcolor="LIGHTGREY"></td></tr>' into v_res1 from dual;
+    dbms_output.put_line(v_res1);
+  $END
+-- mandatory for 10g as the block $IF-$END disapears, it needs at least one line between BEGIN and END
+  v_res1 := '';
+END;
+/
+
 prompt </table><br>
 
 -- *************************************** SHARED POOL
@@ -1618,9 +1689,6 @@ where t1.name like 'table scan blocks gotten%'
 and t2.name like 'table scans (short tables)%'
 and t3.name like 'table scans (long tables)%';
 -- *************************************** Buffer cache : hit ratio
--- TODO : ajouter tableau "advice" de prédiction des perfs selon tailles de cache ?
--- -> http://pages.di.unipi.it/ghelli/didattica/bdldoc/B19306_01/server.102/b14211/memory.htm#i29118
--- !! si DB_CACHE_ADVICE est ON
 
 set define off
 
@@ -1803,25 +1871,30 @@ select instance_name db from v$instance;
 
 -- *************************************** create ou truncate final table "alert_log"
 prompt <!-- Creation des tables -->
+-- force sqlplus to exit on error
+set define "!"
+WHENEVER sqlerror EXIT sql.sqlcode
 DECLARE
    table_exist number;
    tabtools number;
 BEGIN
    select count(table_name) into table_exist from dba_tables
-   where table_name='ALERT_LOG'
-   and owner = 'SYSTEM';
+   where table_name='ALERT_LOG';
+--   and owner = 'SYSTEM';
    IF table_exist = 0 THEN
       select count(tablespace_name) into tabtools from dba_tablespaces
       where tablespace_name='TOOLS';
       IF tabtools = 0 THEN
-         EXECUTE IMMEDIATE 'create table alert_log (
-                             alert_date date,
-                             alert_text varchar2(&&alert_length)
-                         )';
+         dbms_output.put_line('<td bgcolor="#33FF33">Ajouter un tablespace <b>TOOLS</b> et y cr&eacute;er la table ALERT_LOG</br>');
+         raise_application_error(-20003,'Tablespace TOOLS does not exist');
+--         EXECUTE IMMEDIATE 'create table alert_log (
+--                             alert_date date,
+--                            alert_text varchar2(!!alert_length)
+--                         )';
       ELSE
          EXECUTE IMMEDIATE 'create table alert_log (
                              alert_date date,
-                             alert_text varchar2(&&alert_length)
+                             alert_text varchar2(!!alert_length)
                          ) TABLESPACE TOOLS';
       END IF;
       EXECUTE IMMEDIATE 'create index alert_log_idx on alert_log(alert_date)';
@@ -1830,6 +1903,9 @@ BEGIN
    END IF;
 END;
 /
+set define "&"
+-- now avoid sqlplus to exit
+WHENEVER sqlerror CONTINUE;
 
 -- *****************************************  external table alert_log_disk (ak alert.log file)
 
@@ -1838,12 +1914,12 @@ col sbdump new_value sbdump;
 var sbsize  number;
 col sbsize new_value sbsize;
 DECLARE
-dir_exist number;
-bdump varchar2(255);
-v_sql varchar2(2000);
-file_exists BOOLEAN;
-file_length NUMBER;
-file_block_size BINARY_INTEGER;
+   dir_exist number;
+   bdump varchar2(255);
+   v_sql varchar2(2000);
+   file_exists BOOLEAN;
+   file_length NUMBER;
+   file_block_size BINARY_INTEGER;
 BEGIN
    $IF dbms_db_version.version > 11 $THEN
       select VALUE into bdump from v$diag_info where NAME='Diag Trace';
@@ -1851,10 +1927,11 @@ BEGIN
       select VALUE into bdump from v$parameter where name ='background_dump_dest';
    $END
    select count(DIRECTORY_NAME) into dir_exist from dba_directories
-    where DIRECTORY_NAME='BDUMP'
-    and owner in ('SYSTEM','SYS');
+    where DIRECTORY_NAME='BDUMP';
+--    and owner in ('SYSTEM','SYS');
    IF dir_exist <> 0 THEN
-      EXECUTE IMMEDIATE 'drop directory BDUMP';
+      v_sql := 'drop directory BDUMP';
+      EXECUTE IMMEDIATE v_sql;
    END IF;
    v_sql := 'create directory BDUMP as ''' || bdump || '''';
    EXECUTE IMMEDIATE v_sql;
@@ -1879,12 +1956,14 @@ prompt -->
 
 DECLARE
    table_exist number;
+   v_sql varchar2(2000);
 BEGIN
    select count(table_name) into table_exist from dba_tables
-   where table_name='ALERT_LOG_DISK'
-   and owner = 'SYSTEM';
+   where table_name='ALERT_LOG_DISK';
+--   and owner = 'SYSTEM';
    IF table_exist <> 0 THEN
-      EXECUTE IMMEDIATE 'drop table alert_log_disk';
+      v_sql := 'drop table alert_log_disk';
+      EXECUTE IMMEDIATE v_sql;
    END IF;
    EXECUTE IMMEDIATE 'create table alert_log_disk (text varchar2(&&alert_length))
                          organization external (
@@ -1919,7 +1998,7 @@ declare
 
 begin
 -- find a starting date : last audit
-  select max(to_date(date_aud)) into max_date from system.histaudit
+  select max(to_date(date_aud)) into max_date from histaudit
                 where to_date(date_aud) < trunc(sysdate);
   select count(*) into rows_total from alert_log_disk;
 
@@ -2089,7 +2168,7 @@ set serveroutput on
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN a.alert_text LIKE '%<b> (message repeated %' THEN '<b>'||to_char(a.alert_date,'DD/MM/RR HH24:MI')||'</b>' ELSE to_char(a.alert_date,'DD/MM/RR HH24:MI') END,'</td>', '<td bgcolor="LIGHTBLUE">',a.alert_text,'</td>','</tr>'
   from alert_log a
---       (select max(to_date(date_aud)) date_aud from system.histaudit
+--       (select max(to_date(date_aud)) date_aud from histaudit
 --                where to_date(date_aud) < trunc(sysdate)) d
  where (alert_text like '%ORA-%'
   or alert_text like '%TNS-%'
@@ -2103,7 +2182,7 @@ DECLARE cnt_obj number := 0;
 BEGIN
    select count(a.alert_date) into cnt_obj
    from alert_log a
---        (select max(to_date(date_aud)) date_aud from system.histaudit
+--        (select max(to_date(date_aud)) date_aud from histaudit
 --               where to_date(date_aud) < trunc(sysdate)) d
    where (alert_text like '%ORA-%'
      or alert_text like '%TNS-%'

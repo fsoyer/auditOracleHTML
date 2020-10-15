@@ -1,6 +1,6 @@
 * ******  NOTES / TIPS  ******
 * * NOTE 1 : BEWARE OF ALPHANUM COL FORMATS :
-*   XX size in "format aXX" needs to take account of additional HTML code
+*   XX size in "format aXX" needs to consider the size of additional HTML code
 *   like "<td bgcolor="#3399CC" align=center>" that are included in the string !
 * * NOTE 2 : Depends of note 1, if possible do not use col formats. Leave ALPHA by default and use TO_CHAR(valeur,'format numérique') for numbers
 * * NOTE 3 : This script creates (ou re-creates) 2 functions (for display) et 1 table (for historical purposes) in SYSTEM or TOOLS (if exists) tablespace
@@ -21,9 +21,9 @@
 
 * GLOBAL IMPROVEMENTS (RELATIVE TO THE ENTIRE SCRIPT)
 -----------------------------------------------------
-* TODO : translation on the fly. To try : Init a variable LANG at the beginning of the script. Then, init variables TXT_[id of the sentence]_[LANG] with text translated. Finally, in the script for each text, use something like : "SELECT TXT_[id]_&LANG" (to be tested and validated)
+* TODO : translation on the fly. To try : Init a variable LANG at the beginning of the script. Then, init variables TXT_[ID_of_the_sentence]_[LANG] with text translated. Finally, in the script for each text, use something like : "SELECT TXT_[id]_&LANG" (to be tested and validated)
 		 To think : change thousand separator in the same way ! Maybe just an environment variable when launching the script ?
-* TODO : force the creation of tablespace TOOLS (~100M) if not exist ?
+* TODO : force the creation of tablespace TOOLS (~100M) if not exist ? 
 * TODO : USE VARIABLES AT THE BEGINNING OF THE SCRIPT FOR ALERT THRESHOLDS ?
 * TODO : Do a summary (HTML anchors). Frames or javascript ?
 * TODO : Replace stored PL/SQL functions for colorization by javascript ?
@@ -37,13 +37,13 @@
 * TODO : cleanup histo table > 1 year ?
 		Put background to ORANGE on "UP Since" ("Up depuis le") if this date is greater than the last audit date (ie : the database was restarted SINCE the last audit)
 * *** Host :
-* BUG : la table v$osstat n'a pas toujours la stat "NUM_CPU_CORES". ligne vide renvoyée. A voir !
-* TODO : ajout stats systèmes SYSSTATS_MAIN ? Est-ce disponible sous la même forme sur toutes les versions depuis 10g ?
+* BUG : the view v$osstat doesn't always have the column "NUM_CPU_CORES". In this case a blank line is returned.
+* TODO : add system stats SYSSTATS_MAIN ? Is this available with the same format on all versions since 10g ?
 *        select sname, pname, pval1 from sys.aux_stats$;
-* *** Volumetrie :
-* TODO : Afficher un graphe evolution volumétrie (attention aux creations de fichiers entre deux audits)
-*        comment faire en pur HTML, sans PHP ou autre ?
-* TODO : Etudier V$TEMPSEG_USAGE preformances tablespace temporaire
+* *** Sizes :
+* TODO : Display a graph of sizes evolution (beware of new files created between two audits)
+*        how to do it in pur HTML, without PHP ou equivalent ?
+* TODO : Etudier V$TEMPSEG_USAGE (performances tablespace temporaire)
 * *** Segments :
 * TODO : Analyze de la fragmentation des indexes (difficile : nécessite l'activation d'audit + analyze ?)
 * TODO : Afficher l'état du BLOCK CHANGE TRACKING

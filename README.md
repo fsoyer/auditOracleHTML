@@ -17,9 +17,9 @@ For a wider understanding, I'll translate parts from french to english, step by 
 * IMPORTANT : this script must be executed under sqlplus, as SYSTEM
   If SYSTEM access is not permitted, it needs to be executed by a user with right SELECT ANY DICTIONARY granted
 ```
-    GRANT SELECT ANY DICTIONARY TO MyAuditUser;
+    GRANT CONNECT, SELECT ANY DICTIONARY TO MyAuditUser default tablespace TOOLS;
 ```
-* IMPORTANT : it's better if a tablespace "TOOLS" exists in the database for a table of audit history. If not, the table is created in tablespace SYSTEM.
+* IMPORTANT : it's better if a tablespace "TOOLS" exists in the database for a table of audit history. If not, the table is created in tablespace SYSTEM (in which the user must be able to write).
 
 * TNS :
 ```
