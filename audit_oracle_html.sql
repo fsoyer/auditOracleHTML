@@ -153,8 +153,9 @@ prompt <tr><td width=20%><b>Table historique</b></td>
 --prompt <td bgcolor="LIGHTBLUE">
 set define off
 
--- force sqlplus to exit on error
+-- force sqlplus to exit on error, tablespace TOOLS is mandatory
 WHENEVER sqlerror EXIT sql.sqlcode
+
 DECLARE
    tabhist number;
    tabtools number;
@@ -176,10 +177,9 @@ BEGIN
    IF tabhist = 0 THEN
       IF tabtools = 0 THEN
 --         dbms_output.put_line('<td bgcolor="#FF0000">Creation table HISTAUDIT tablespace SYSTEM...</br>');
-         dbms_output.put_line('<td bgcolor="#33FF33">Ajouter un tablespace <b>TOOLS</b> et y cr&eacute;er la table histaudit</br>');
-         raise_application_error(-20001,'Tablespace TOOLS does not exist');
---         dbms_output.put_line('</td></tr></table>');
---         raise_application_error(-20001,'Tablespace inexistant');
+         dbms_output.put_line('<td bgcolor="#FF0000">Ajouter un tablespace <b>TOOLS</b> et y cr&eacute;er la table histaudit</br>');
+         raise_application_error(-20001,'Tablespace TOOLS does not exist. Please create it before executing this script');
+         dbms_output.put_line('</td></tr></table>');
 --         EXECUTE IMMEDIATE 'create table histaudit
 --                           (date_aud  date,
 --                            type_obj varchar2(5),
@@ -206,7 +206,7 @@ BEGIN
        where table_name='HISTAUDIT' AND column_name='VALEUR';
       select char_length into collength from dba_tab_columns
        where table_name='HISTAUDIT' and column_name='OBJ_NAME';
-      IF colval>0 AND collength=255 THEN
+      IF colval>0 AND collength=255 and tabtab = 'TOOLS' THEN
          dbms_output.put_line('<td bgcolor="#33FF33">Table HISTAUDIT existante ');
       ELSE
 		  IF colval=0 THEN
@@ -214,19 +214,19 @@ BEGIN
 		        EXECUTE IMMEDIATE 'alter table histaudit drop column MODIFIED';
 		     END IF;
 		     EXECUTE IMMEDIATE 'alter table histaudit add VALEUR varchar2(255)';
-		     dbms_output.put_line('<td bgcolor="#FF0000">Modification table HISTAUDIT (col VALEUR)');
+		     dbms_output.put_line('<td bgcolor="#FF9900">Modification table HISTAUDIT (col VALEUR)');
 		  END IF;
 		  IF collength < 255 THEN
 		     EXECUTE IMMEDIATE 'alter table histaudit modify OBJ_NAME varchar2(255)';
-		     dbms_output.put_line('<td bgcolor="#FF0000">Modification table HISTAUDIT (col OBJ_NAME)');
+		     dbms_output.put_line('<td bgcolor="#FF9900">Modification table HISTAUDIT (col OBJ_NAME)');
 		  END IF;
 		  IF collength > 255 THEN
 		     dbms_output.put_line('<td bgcolor="#33FF33">Table HISTAUDIT existante ');
 		  END IF;
       END IF;
       IF tabtab <> 'TOOLS' THEN
-         dbms_output.put_line('(tablespace '||tabtab||')<br>');
-         dbms_output.put_line('D&eacute;placer la table HISTAUDIT dans un tablespace <b>TOOLS</b>.');
+         dbms_output.put_line('<td bgcolor="#FF0000">(tablespace '||tabtab||')<br/>');
+         dbms_output.put_line('D&eacute;placer la table HISTAUDIT dans un tablespace <b>TOOLS</b>.<br/><br/>');
          raise_application_error(-20002,'Tablespace TOOLS does not exist');
       ELSE
          dbms_output.put_line('(tablespace '||tabtab||')<br>');
@@ -444,7 +444,9 @@ from nls_database_parameters);
 -- *************************************** Modifies lors du dernier audit ?
 prompt <tr>
 set define off
-prompt <td width=20%><b>Param&egrave;tres modifi&eacute;s depuis le dernier audit</b></td>
+select decode(max(to_date(date_aud)),'','<td width=20%><b>Principaux param&egrave;tres</b></td>','<td width=20%><b>Param&egrave;tres modifi&eacute;s depuis le dernier audit</b></td>') from histaudit
+  where to_date(date_aud) < trunc(sysdate);
+-- prompt <td width=20%><b>Param&egrave;tres modifi&eacute;s depuis le dernier audit</b></td>
 set define "&"
 
 DECLARE cnt_init number := 0;
@@ -564,8 +566,7 @@ select decode(log_mode,'ARCHIVELOG','<td bgcolor="#33FF33">','<td bgcolor="#FF99
 prompt </td></tr>
 
 prompt <tr><td width=20%><b>Archive log destination</b></td>
-select distinct decode(d.log_mode,'ARCHIVELOG','<td bgcolor="LIGHTBLUE">'||p.name||' = '||p.value||'<br/>', '<td bgcolor="LIGHTGREY">') from v$database d,v$parameter p where (p.name like 'log_archive_dest_%' or p.name = 'log_archive_dest') and p.name not like '%state%' and p.value is not NULL;
-
+--select distinct decode(d.log_mode,'ARCHIVELOG','<td bgcolor="LIGHTBLUE">', '<td bgcolor="LIGHTGREY">') from v$database d,v$parameter p where (p.name like 'log_archive_dest_%' or p.name = 'log_archive_dest') and p.name not like '%state%' and p.value is not NULL;
 set define off
 DECLARE
 arch_mode number := 0;
@@ -574,16 +575,20 @@ BEGIN
    select decode(log_mode,'ARCHIVELOG',1,0) into arch_mode from v$database;
    select count(name) into cnt_dest from v$parameter
    where (name like 'log_archive_dest_%' or name = 'log_archive_dest') and name not like '%state%' and value is not NULL;
-   if arch_mode =1 AND cnt_dest=0 then
-      dbms_output.put_line('<td bgcolor="ORANGE" colspan=2>Les ARCHIVE LOGS sont dans la flash_recovery_area ! A d&eacute;placer !');
+   if arch_mode=1 AND cnt_dest>0 then
+      dbms_output.put_line('<td bgcolor="LIGHTBLUE">');
    end if;
-   if arch_mode =0 AND cnt_dest=0 then
+   if arch_mode=1 AND cnt_dest=0 then
+      dbms_output.put_line('<td bgcolor="ORANGE">Les ARCHIVE LOGS sont dans la flash_recovery_area ! A d&eacute;placer !');
+   end if;
+   if arch_mode=0 then
       dbms_output.put_line('<td bgcolor="LIGHTGREY">');
    end if;
 end;
 /
-
+select distinct decode(d.log_mode,'ARCHIVELOG',p.name||' = '||p.value||'<br/>', '') from v$database d,v$parameter p where (p.name like 'log_archive_dest_%' or p.name = 'log_archive_dest') and p.name not like '%state%' and p.value is not NULL;
 prompt </td></tr>
+
 prompt <tr><td width=20%><b>Archive log format</b></td>
 select decode(d.log_mode,'ARCHIVELOG','<td bgcolor="LIGHTBLUE">'||p.value||'<br/>', '<td bgcolor="LIGHTGREY">') from v$database d,v$parameter p where p.name like 'log_archive_format';
 prompt </td></tr></table>

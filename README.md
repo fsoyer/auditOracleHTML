@@ -17,9 +17,12 @@ For a wider understanding, I'll translate parts from french to english, step by 
 * IMPORTANT : this script must be executed under sqlplus, as SYSTEM
   If SYSTEM access is not permitted, it needs to be executed by a user with right SELECT ANY DICTIONARY granted
 ```
-    GRANT CONNECT, SELECT ANY DICTIONARY TO MyAuditUser default tablespace TOOLS;
+    CREATE USER MyAuditUser IDENTIFIED BY "password";
+    ALTER USER MyAuditUser DEFAULT TABLESPACE TOOLS;
+    ALTER USER MyAuditUser QUOTA UNLIMITED ON TOOLS;
+    GRANT CONNECT, SELECT ANY DICTIONARY TO MyAuditUser;
 ```
-* IMPORTANT : it's better if a tablespace "TOOLS" exists in the database for a table of audit history. If not, the table is created in tablespace SYSTEM (in which the user must be able to write).
+* IMPORTANT : it's better (in fact, actually mandatory) if a tablespace "TOOLS" exists in the database for a table of audit history. If not, the table can be created in tablespace SYSTEM (but the user must have write right).
 
 * TNS :
 ```
@@ -98,3 +101,5 @@ For a wider understanding, I'll translate parts from french to english, step by 
 * 08/2018 ajout composants installés (DBA_REGISTRY)
 * 08/2018 v3.3 utilisation de la compilation conditionnelle $IF $THEN $END pour augmenter la compatibilité 10g, 11g et >
 * 09/2018 ajout des informations sur la Flash recovery area
+* 2019-2020 some display and format improvements here and there.
+* 10/2020 v3.4 script modification to be launched by a normal user instead of SYSTEM
