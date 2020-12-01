@@ -1,5 +1,5 @@
 -- AUDIT BASES ORACLE
--- v3.3
+-- v3.4
 -- Compatible Oracle 10g to 19c
 -- (c) 2005, Frank Soyer <frank.soyer@gmail.com>
 
@@ -20,7 +20,7 @@
 -- *************************************** Initialisation SQLPlus
 set pages 999
 set lines 200
-set echo off
+-- set echo off
 set termout off
 set trims on
 set showmode off
@@ -33,6 +33,12 @@ set head off
 ALTER SESSION SET NLS_NUMERIC_CHARACTERS = ", ";
 ALTER SESSION SET NLS_DATE_FORMAT = 'DD/MM/YYYY';
 ALTER SESSION SET NLS_DATE_LANGUAGE = 'FRENCH';
+
+-- ************************************** CONSTANTES MODIFIABLES
+define tbstools = TOOLS
+define tblhist = HISTAUDIT
+define logfile = ORACLE
+define envfile = env
 
 -- *************************************** Creation de fonctions
 -- Fonction CouleurLimite renvoie :
@@ -88,8 +94,6 @@ END;
 /
 
 -- *************************************** Variables et constantes
-define logfile = ORACLE
-define envfile = env
 -- ATTENTION : AUCUN ESPACE DANS LES LISTES, SINON LA VARIABLE EST TRONQUEE !
 define sysusers = ('SYS','SYSTEM','CTXSYS','DBSNMP','OUTLN','ORDSYS','ORDPLUGINS','MDSYS','DMSYS','WMSYS','WKSYS','OLAPSYS','SYSMAN','XDB','EXFSYS','TSMSYS','MGMT_VIEW','ORACLE_OCM','DIP','SI_INFORMTN_SCHEMA','ANONYMOUS')
 define exusers = ('SCOTT','HR','OE','PM','QS','QS_ADM','QS_CBADM','QS_CS','QS_ES','QS_OS','QS_WS','SH','PERFAUDIT')
@@ -151,9 +155,9 @@ prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>H
 -- Creation table HISTAUDIT si necessaire
 prompt <tr><td width=20%><b>Table historique</b></td>
 --prompt <td bgcolor="LIGHTBLUE">
-set define off
+set define "~"
 
--- force sqlplus to exit on error, tablespace TOOLS is mandatory
+-- force sqlplus to exit on error, tablespace TOOLS (or whatever is in variable "tbstools") is mandatory
 WHENEVER sqlerror EXIT sql.sqlcode
 
 DECLARE
@@ -166,68 +170,62 @@ DECLARE
    tbs_tools_absent EXCEPTION;
 
 BEGIN
+
    select count(table_name) into tabhist from dba_tables
-    where table_name='HISTAUDIT';
+    where table_name='~tblhist';
    select count(tablespace_name) into tabtools from dba_tablespaces
-    where tablespace_name = 'TOOLS';
-   IF tabhist > 0 THEN
-      select tablespace_name into tabtab from dba_tables where table_name='HISTAUDIT';
-   END IF;
+    where tablespace_name = '~tbstools';
 
    IF tabhist = 0 THEN
       IF tabtools = 0 THEN
---         dbms_output.put_line('<td bgcolor="#FF0000">Creation table HISTAUDIT tablespace SYSTEM...</br>');
-         dbms_output.put_line('<td bgcolor="#FF0000">Ajouter un tablespace <b>TOOLS</b> et y cr&eacute;er la table histaudit</br>');
-         raise_application_error(-20001,'Tablespace TOOLS does not exist. Please create it before executing this script');
+         dbms_output.put_line('<td bgcolor="#FF0000">Ajouter un tablespace <b>~tbstools</b> et y cr&eacute;er la table <b>~tblhist</b></br>');
+         raise_application_error(-20001,'Tablespace ~tbstools does not exist. Please create it before continuing');
          dbms_output.put_line('</td></tr></table>');
---         EXECUTE IMMEDIATE 'create table histaudit
---                           (date_aud  date,
---                            type_obj varchar2(5),
---                            obj_name varchar2(255),
---                            total number,
---                            utilis number,
---                            VALEUR varchar2(255))';
       ELSE
-         dbms_output.put_line('<td bgcolor="#33FF33">Creation table HISTAUDIT tablespace TOOLS...<br>');
-         EXECUTE IMMEDIATE 'create table histaudit
+         dbms_output.put_line('<td bgcolor="#33FF33">Creation table ~tblhist tablespace ~tbstools...<br>');
+         EXECUTE IMMEDIATE 'create table ~tblhist
                            (date_aud  date,
                             type_obj varchar2(5),
                             obj_name varchar2(255),
                             total number,
                             utilis number,
                             VALEUR varchar2(255))
-                          TABLESPACE TOOLS';
-         EXECUTE IMMEDIATE 'create or replace public synonym histaudit for histaudit';
+                          TABLESPACE ~tbstools';
+         EXECUTE IMMEDIATE 'create or replace public synonym ~tblhist for ~tblhist';
       END IF;
    ELSE
+      select tablespace_name into tabtab from dba_tables where table_name='~tblhist';
       select count(column_name) into colmodif from dba_tab_columns
-       where table_name='HISTAUDIT' AND column_name='MODIFIED';
+       where table_name='~tblhist' AND column_name='MODIFIED';
       select count(column_name) into colval from dba_tab_columns
-       where table_name='HISTAUDIT' AND column_name='VALEUR';
+       where table_name='~tblhist' AND column_name='VALEUR';
       select char_length into collength from dba_tab_columns
-       where table_name='HISTAUDIT' and column_name='OBJ_NAME';
-      IF colval>0 AND collength=255 and tabtab = 'TOOLS' THEN
-         dbms_output.put_line('<td bgcolor="#33FF33">Table HISTAUDIT existante ');
+       where table_name='~tblhist' and column_name='OBJ_NAME';
+      IF colval>0 AND collength=255 and tabtab = '~tbstools' THEN
+         dbms_output.put_line('<td bgcolor="#33FF33">Table ~tblhist existante ');
       ELSE
 		  IF colval=0 THEN
 		     IF colmodif>0 THEN
-		        EXECUTE IMMEDIATE 'alter table histaudit drop column MODIFIED';
+		        EXECUTE IMMEDIATE 'alter table ~tblhist drop column MODIFIED';
 		     END IF;
-		     EXECUTE IMMEDIATE 'alter table histaudit add VALEUR varchar2(255)';
-		     dbms_output.put_line('<td bgcolor="#FF9900">Modification table HISTAUDIT (col VALEUR)');
+		     EXECUTE IMMEDIATE 'alter table ~tblhist add VALEUR varchar2(255)';
+		     dbms_output.put_line('<td bgcolor="#FF9900">Modification table ~tblhist (col VALEUR)');
 		  END IF;
 		  IF collength < 255 THEN
-		     EXECUTE IMMEDIATE 'alter table histaudit modify OBJ_NAME varchar2(255)';
-		     dbms_output.put_line('<td bgcolor="#FF9900">Modification table HISTAUDIT (col OBJ_NAME)');
+		     EXECUTE IMMEDIATE 'alter table ~tblhist modify OBJ_NAME varchar2(255)';
+		     dbms_output.put_line('<td bgcolor="#FF9900">Modification table ~tblhist (col OBJ_NAME)');
 		  END IF;
 		  IF collength > 255 THEN
-		     dbms_output.put_line('<td bgcolor="#33FF33">Table HISTAUDIT existante ');
+		     dbms_output.put_line('<td bgcolor="#33FF33">Table ~tblhist existante ');
 		  END IF;
       END IF;
-      IF tabtab <> 'TOOLS' THEN
-         dbms_output.put_line('<td bgcolor="#FF0000">(tablespace '||tabtab||')<br/>');
-         dbms_output.put_line('D&eacute;placer la table HISTAUDIT dans un tablespace <b>TOOLS</b>.<br/><br/>');
-         raise_application_error(-20002,'Tablespace TOOLS does not exist');
+      IF tabtab <> '~tbstools' THEN
+         dbms_output.put_line('<td bgcolor="#FF0000">(table ~tblhist existante, tablespace '||tabtab||')<br/>');
+         dbms_output.put_line('D&eacute;placer la table ~tblhist dans le tablespace <b>~tbstools</b> pr&eacute;conis&eacute;</b>.<br/><br/>');
+         raise_application_error(-20002,'Table ~tblhist needs to be moved');
+         IF tabtools = 0 THEN
+            raise_application_error(-20001,'Tablespace ~tbstools does not exist. Please create it before continuing');
+         END IF;
       ELSE
          dbms_output.put_line('(tablespace '||tabtab||')<br>');
       END IF;
@@ -240,13 +238,13 @@ WHENEVER sqlerror CONTINUE;
 prompt </td></tr>
 prompt <tr><td width=20%><b>Pr&eacute;c&eacute;dent audit</b></td>
 prompt <td bgcolor="LIGHTBLUE">
--- select decode(max(to_date(date_aud)),'','N/A',max(to_date(date_aud))) from histaudit
+-- select decode(max(to_date(date_aud)),'','N/A',max(to_date(date_aud))) from &tblhist
 --       where to_date(date_aud) < trunc(sysdate);
 set define "&"
 
 variable last_audit varchar2(100);
 begin
-      select decode(max(to_date(date_aud)),'','<font color="#FF0000"><b><i>Premier audit</i></b></font>',to_char(max(to_date(date_aud)),'DD-MON-YYYY',N'NLS_DATE_LANGUAGE = AMERICAN')) into :last_audit from histaudit
+      select decode(max(to_date(date_aud)),'','<font color="#FF0000"><b><i>Premier audit</i></b></font>',to_char(max(to_date(date_aud)),'DD-MON-YYYY',N'NLS_DATE_LANGUAGE = AMERICAN')) into :last_audit from &tblhist
       where to_date(date_aud) < trunc(sysdate);
 end;
 /
@@ -303,26 +301,26 @@ prompt </table>
 prompt <br>
 
 -- *************************************** Versions
-delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='VERS';
+delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='VERS';
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Versions</b></font></td></tr>
-set define off
+set define "~"
 
 -- Add <td> if no rows are returned (first audit)
 select decode(count(valeur), 0, '<tr><td bgcolor="LIGHTBLUE" colspan=5>')
- from histaudit
+ from ~tblhist
  where obj_name like 'Oracle Database%';
 -- else change bg color if version has changed
-select decode(banner, valeur, '<tr><td bgcolor="LIGHTBLUE" colspan=5>','<tr><td bgcolor="#FF0000" colspan=5><b>Version modifi&eacute;e depuis le dernier audit</b><br><br>') from v$version,histaudit where banner like 'Oracle Database%'
+select decode(banner, valeur, '<tr><td bgcolor="LIGHTBLUE" colspan=5>','<tr><td bgcolor="#FF0000" colspan=5><b>Version modifi&eacute;e depuis le dernier audit</b><br><br>') from v$version,~tblhist where banner like 'Oracle Database%'
  and obj_name like 'Oracle Database%'
- and to_date(date_aud) = (select max(to_date(date_aud)) from histaudit where type_obj = 'VERS');
+ and to_date(date_aud) = (select max(to_date(date_aud)) from ~tblhist where type_obj = 'VERS');
 
 select banner,'<br>' from v$version;
 set define "&"
 prompt </td></tr>
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (VERSION)
-insert into histaudit (
+insert into &tblhist (
 select sysdate, 'VERS', 'Oracle Database', 0, 0, banner
 from v$version
   where banner like 'Oracle Database%');
@@ -430,54 +428,54 @@ union
 select '<tr><td bgcolor="LIGHTBLUE">', au.name, '</td>', '<td bgcolor="'|| decode(lower(au.value), 'none', '#33FF33', 'ORANGE') || '">', decode(lower(au.value), 'os', au.value||' ('||aup.value||')', 'xml', au.value||' ('||aup.value||')', 'xml, extended', au.value||' ('||aup.value||')', au.value) || ' (table AUD$ = ' || &vaudcnt || ' rows, '|| trim(to_char(&vaudsze,'999G999G999G990D00')) ||' Mo)','</td>','</tr>' from v$parameter au, v$parameter aup where au.name='audit_trail' and aup.name='audit_file_dest';
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (PARAMETRES INIT)
-delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='INIT';
-insert into histaudit (
+delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='INIT';
+insert into &tblhist (
 select sysdate, 'INIT', substr(name,1,30), 0, 0, value
 from v$parameter
   where ISDEFAULT='FALSE'
   and name not like '%nls%');
 -- NLS parameters change in instance according to client config. We keep only database parameters.
-insert into histaudit (
+insert into &tblhist (
 select sysdate, 'INIT', substr(parameter,1,30), 0, 0, value
 from nls_database_parameters);
 
 -- *************************************** Modifies lors du dernier audit ?
 prompt <tr>
-set define off
-select decode(max(to_date(date_aud)),'','<td width=20%><b>Principaux param&egrave;tres</b></td>','<td width=20%><b>Param&egrave;tres modifi&eacute;s depuis le dernier audit</b></td>') from histaudit
+set define "~"
+select decode(max(to_date(date_aud)),'','<td width=20%><b>Principaux param&egrave;tres</b></td>','<td width=20%><b>Param&egrave;tres modifi&eacute;s depuis le dernier audit</b></td>') from ~tblhist
   where to_date(date_aud) < trunc(sysdate);
 -- prompt <td width=20%><b>Param&egrave;tres modifi&eacute;s depuis le dernier audit</b></td>
 set define "&"
 
 DECLARE cnt_init number := 0;
 BEGIN
-  select count(H1.obj_name) into cnt_init from histaudit H1, histaudit H2
+  select count(H1.obj_name) into cnt_init from &tblhist H1, &tblhist H2
   where H1.obj_name = H2.obj_name
   and H1.type_obj = 'INIT'
   and H2.type_obj = 'INIT'
   and H1.valeur <> H2.valeur
   and trunc(to_date(H1.date_aud)) = trunc(sysdate)
-  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from histaudit
+  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from &tblhist
                            where to_date(date_aud) < trunc(sysdate));
 -- test if a parameter was initialized (ie added in the non-default parameters)
   if cnt_init=0 then
-     select count(H1.obj_name) into cnt_init from histaudit H1
+     select count(H1.obj_name) into cnt_init from &tblhist H1
      where H1.type_obj = 'INIT'
      and H1.obj_name not in
-        (select H2.obj_name from histaudit H2
+        (select H2.obj_name from &tblhist H2
          where H2.type_obj = 'INIT'
-         and to_date(H2.date_aud) = (select max(to_date(date_aud)) from histaudit
+         and to_date(H2.date_aud) = (select max(to_date(date_aud)) from &tblhist
                              where to_date(date_aud) < trunc(sysdate)))
      and trunc(to_date(H1.date_aud)) = trunc(sysdate);
   end if;
 -- test if a parameter was resetted (ie deleted from non-default parameters)
   if cnt_init=0 then
-  select count(H2.obj_name) into cnt_init from histaudit H2
+  select count(H2.obj_name) into cnt_init from &tblhist H2
      where H2.type_obj = 'INIT'
-     and to_date(H2.date_aud) = (select max(to_date(date_aud)) from histaudit
+     and to_date(H2.date_aud) = (select max(to_date(date_aud)) from &tblhist
                                  where to_date(date_aud) < trunc(sysdate))
      and H2.obj_name not in
-        (select H1.obj_name from histaudit H1
+        (select H1.obj_name from &tblhist H1
          where H1.type_obj = 'INIT'
          and trunc(to_date(H1.date_aud)) = trunc(sysdate));
   end if;
@@ -490,32 +488,32 @@ end;
 /
 
 select H1.obj_name, ' (', H2.valeur, ' -> ', H1.valeur, ')<br>' -- parametres modifies
-from histaudit H1, histaudit H2
+from &tblhist H1, &tblhist H2
   where H1.obj_name = H2.obj_name
   and H1.type_obj = 'INIT'
   and H2.type_obj = 'INIT'
   and H1.valeur <> H2.valeur
   and trunc(to_date(H1.date_aud)) = trunc(sysdate)
-  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from histaudit
+  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from &tblhist
                            where to_date(date_aud) < trunc(sysdate))
 UNION
 select H1.obj_name, ' (', '<b>New</b>', ' -> ', H1.valeur, ')<br>' -- nouveaux parametres
-from histaudit H1
+from &tblhist H1
   where H1.type_obj = 'INIT'
   and H1.obj_name not in
-      (select H2.obj_name from histaudit H2
+      (select H2.obj_name from &tblhist H2
        where H2.type_obj = 'INIT'
-       and to_date(H2.date_aud) = (select max(to_date(date_aud)) from histaudit
+       and to_date(H2.date_aud) = (select max(to_date(date_aud)) from &tblhist
                            where to_date(date_aud) < trunc(sysdate)))
   and trunc(to_date(H1.date_aud)) = trunc(sysdate)
 UNION
 select H1.obj_name, ' (', H1.valeur, ' -> ', '<b>Default</b>', ')<br>' -- parametres réinitialises au defaut
-from (select * from histaudit H
+from (select * from &tblhist H
       where H.type_obj = 'INIT'
-       and to_date(H.date_aud) = (select max(to_date(date_aud)) from histaudit
+       and to_date(H.date_aud) = (select max(to_date(date_aud)) from &tblhist
                                   where to_date(date_aud) < trunc(sysdate))) H1
 where H1.obj_name not in
-(select H2.obj_name from histaudit H2
+(select H2.obj_name from &tblhist H2
  where H2.type_obj = 'INIT'
  and trunc(to_date(H2.date_aud)) = trunc(sysdate))
 order by 1;
@@ -645,8 +643,8 @@ prompt <div align=center><b><font color="WHITE">SECTION STOCKAGE</font></b></div
 prompt <hr>
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (TABLESPACES ET SEGMENTS)
-delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TBS';
-insert into histaudit (
+delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TBS';
+insert into &tblhist (
 select sysdate, 'TBS', t.tablespace_name, t.total, 
          decode(u.utilise,'',0,u.utilise), 0
 from (select df.tablespace_name,
@@ -677,32 +675,32 @@ from (select tablespace_name,
       from dba_temp_files
       group by tablespace_name));
 
-delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='FIL';
-insert into histaudit (
+delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='FIL';
+insert into &tblhist (
 select sysdate, 'FIL', file_name, 0, 0, 0
       from dba_data_files);
-insert into histaudit (
+insert into &tblhist (
 select sysdate, 'FIL', file_name, 0, 0, 0
       from dba_temp_files);
 
-delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TAB';
-insert into histaudit (
+delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TAB';
+insert into &tblhist (
 select sysdate, 'TAB', 'Total segments tables', total, 
          0, 0
 from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(1024*1024),2)) total
       from dba_segments
       where segment_type like 'TABLE%'
       and owner not in &sysusers and owner not in &exusers));
-delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='IND';
-insert into histaudit (
+delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='IND';
+insert into &tblhist (
 select sysdate, 'IND', 'Total segments indexes', total, 
          0, 0
 from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(1024*1024),2)) total
       from dba_segments
       where segment_type like 'INDEX%'
       and owner not in &sysusers and owner not in &exusers));
-delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='AUT';
-insert into histaudit (
+delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='AUT';
+insert into &tblhist (
 select sysdate, 'AUT', 'Total segments autres', total, 
          0, 0
 from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(1024*1024),2)) total
@@ -729,9 +727,9 @@ prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Taille (Mo)</
 set define "&"
 
 WITH list_tbs AS (
-select distinct OBJ_NAME,TYPE_OBJ from histaudit
+select distinct OBJ_NAME,TYPE_OBJ from &tblhist
 where type_obj in ('TBS','FIL')
-and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
+and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
                             where to_date(date_aud) < trunc(sysdate))
 )
 select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') and dt.contents NOT IN ('UNDO') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END||'</td>' as tbs,
@@ -746,9 +744,9 @@ where df.tablespace_name=dt.tablespace_name(+)
 group by df.tablespace_name, df.file_name, autoextensible, contents, bigfile
 order by 2,3;
 WITH list_tbs AS (
-select distinct OBJ_NAME,TYPE_OBJ from histaudit
+select distinct OBJ_NAME,TYPE_OBJ from &tblhist
 where type_obj in ('TBS','FIL')
-and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
+and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
                             where to_date(date_aud) < trunc(sysdate))
 )
 select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b><i>(default tmp)</i>' END||'</td>' as tbs,
@@ -782,7 +780,7 @@ prompt <tr><td><b>Tablespace</b></td><td><b>Bigfile</b></td><td><b>Contenu</b></
 set define "&"
 -- TABLESPACES DATAS
 WITH list_tbs AS (
-select distinct OBJ_NAME from histaudit where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
+select distinct OBJ_NAME from &tblhist where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
       where to_date(date_aud) < trunc(sysdate))
 )
 select '<tr>','<td bgcolor="'||CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">',CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END,t.tablespace_name,CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END,'</td>', '<td bgcolor="',decode(BIGFILE,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (BIGFILE,'YES','WHITE','BLACK'),'">', maxt.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">','<td bgcolor="#FF0000">'),maxt.status,'</td>',
@@ -823,13 +821,13 @@ from (select tablespace_name,
              round(sum(blocks)*&dbloc/(1024*1024),2) libre
       from dba_free_space
       group by tablespace_name) l,
-      (select * from histaudit
+      (select * from &tblhist
          where trunc(to_date(date_aud))=trunc(sysdate)
          and type_obj='TBS') a,
-      (select * from histaudit
+      (select * from &tblhist
          where to_date(date_aud) like
-        (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
-            where to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
+        (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
+            where to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
       where to_date(date_aud) < trunc(sysdate))
             and type_obj='TBS')
          and type_obj='TBS') h
@@ -933,12 +931,12 @@ from
      
 select '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',to_char(round(sum(a.total-h.total)),'S99G999G990D00'),'</b></font></td>' as total, 
         '<td bgcolor="BLUE" align=right colspan=4><font color="WHITE"><b>',to_char(round(sum(a.utilis-h.utilis)),'S99G999G990D00'),'</b></font></td>' as utilise,'</tr>'
-from (select * from histaudit
+from (select * from &tblhist
 	where trunc(to_date(date_aud))=trunc(sysdate)
         and type_obj='TBS') a,
-(select * from histaudit
+(select * from &tblhist
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='TBS')
 	and type_obj='TBS') h
@@ -947,7 +945,7 @@ where a.obj_name=h.obj_name;
 prompt </table><br>
 
 -- TABLESPACE(S) SUPPRIME(S)
-set define off
+set define "~"
 
 DECLARE
  tbsremoved_cnt number := 0;
@@ -955,13 +953,13 @@ DECLARE
  v_res varchar2(255);
  v_sql varchar2(2000);
 BEGIN
-   select count(OBJ_NAME) into tbsremoved_cnt from histaudit
-     where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit where to_date(date_aud) < trunc(sysdate))
+   select count(OBJ_NAME) into tbsremoved_cnt from ~tblhist
+     where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist where to_date(date_aud) < trunc(sysdate))
      and OBJ_NAME not in (select tablespace_name from dba_tablespaces);
    if tbsremoved_cnt > 0 then
      v_sql := 'SELECT ''<tr><td bgcolor="ORANGE">''||OBJ_NAME||''</td></tr>''
-      FROM histaudit
-        where type_obj=''TBS'' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit where to_date(date_aud) < trunc(sysdate))
+      FROM ~tblhist
+        where type_obj=''TBS'' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist where to_date(date_aud) < trunc(sysdate))
       and OBJ_NAME not in (select tablespace_name from dba_tablespaces) ';
      dbms_output.put_line('<table border=1 width=100% bgcolor="WHITE"><tr><td bgcolor="#3399CC" align=center><font color="WHITE"><b>Tablespace(s) supprim&eacute;(s) depuis le dernier audit</b></font></td></tr>');
      open v_cur for v_sql;
@@ -995,9 +993,9 @@ select  '<tr>','<td bgcolor="LIGHTBLUE">TABLES</td>',
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type like 'TABLE%'
         and owner not in &sysusers and owner not in &exusers) a,
-(select * from histaudit
+(select * from &tblhist
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='TAB')
 	and type_obj='TAB') l;
@@ -1007,9 +1005,9 @@ select  '<tr>','<td bgcolor="LIGHTBLUE">INDEXES</td>',
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type like 'INDEX%'
         and owner not in &sysusers and owner not in &exusers) a,
-(select * from histaudit
+(select * from &tblhist
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='IND')
 	and type_obj='IND') l;
@@ -1019,9 +1017,9 @@ select DISTINCT '<tr>','<td bgcolor="LIGHTBLUE">AUTRES (LOB SEGMENTS, LOB INDEXE
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type not like 'TABLE%' and segment_type not like 'INDEX%'
         and owner not in &sysusers and owner not in &exusers) a,
-(select * from histaudit
+(select * from &tblhist
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from histaudit
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
                 where trunc(to_date(date_aud)) < trunc(sysdate)
                 and type_obj='AUT')
 	and type_obj='AUT') l;
@@ -1389,19 +1387,19 @@ set define "&"
 prompt </table><br>
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE
-delete from histaudit where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='SGA';
-insert into histaudit (
+delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='SGA';
+insert into &tblhist (
 select sysdate,'SGA','sga_size (spfile/max_used)',total,valeur,0 from 
 (select round(value/(1024*1024),2) total from v$parameter where name = 'sga_max_size') p,
 (select round(sum(bytes)/(1024*1024),2) valeur from v$sgastat) s
 );
-insert into histaudit (
+insert into &tblhist (
 select sysdate, 'SGA', 'shared_pool (spfile/used)', t.Shared_pool_size, u.utilise, 0
 from (select name, round(value/(1024*1024),2) Shared_pool_size
       from v$parameter where name='shared_pool_size') t,
      (select round(sum(bytes)/(1024*1024),2) Utilise
       from v$sgastat where pool='shared pool' and name <> 'free memory') u);
-insert into histaudit (
+insert into &tblhist (
 select sysdate,'SGA','buffer_cache',round(value/(1024*1024),2), 0, 0 from v$sga
 where name = 'Database Buffers');
 
@@ -1424,12 +1422,12 @@ decode(SIGN(a.utilis-h.utilis),
        0,'<td bgcolor="LIGHTBLUE" align=right>'||to_char(a.utilis-h.utilis,'99G999G990D00')||'</td>',
        1,'<td bgcolor="ORANGE" align=right>'||to_char(a.utilis-h.utilis,'S99G999G990D00')||'</td>') UTILISE,'</tr>'
 from
-(select * from histaudit
+(select * from &tblhist
 	where trunc(to_date(date_aud))=trunc(sysdate)
 and type_obj='SGA') a,
-(select * from histaudit
+(select * from &tblhist
 	where to_date(date_aud) like
-	(select max(to_date(date_aud)) from histaudit
+	(select max(to_date(date_aud)) from &tblhist
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='SGA')
 	and type_obj='SGA') h
@@ -1877,7 +1875,7 @@ select instance_name db from v$instance;
 -- *************************************** create ou truncate final table "alert_log"
 prompt <!-- Creation des tables -->
 -- force sqlplus to exit on error
-set define "!"
+set define "~"
 WHENEVER sqlerror EXIT sql.sqlcode
 DECLARE
    table_exist number;
@@ -1888,19 +1886,19 @@ BEGIN
 --   and owner = 'SYSTEM';
    IF table_exist = 0 THEN
       select count(tablespace_name) into tabtools from dba_tablespaces
-      where tablespace_name='TOOLS';
+      where tablespace_name='~tbstools';
       IF tabtools = 0 THEN
-         dbms_output.put_line('<td bgcolor="#33FF33">Ajouter un tablespace <b>TOOLS</b> et y cr&eacute;er la table ALERT_LOG</br>');
-         raise_application_error(-20003,'Tablespace TOOLS does not exist');
+         dbms_output.put_line('<td bgcolor="#33FF33">Ajouter un tablespace <b>~tbstools</b> pour la table ALERT_LOG</br>');
+         raise_application_error(-20003,'Tablespace ~tbstools does not exist');
 --         EXECUTE IMMEDIATE 'create table alert_log (
 --                             alert_date date,
---                            alert_text varchar2(!!alert_length)
+--                            alert_text varchar2(~~alert_length)
 --                         )';
       ELSE
          EXECUTE IMMEDIATE 'create table alert_log (
                              alert_date date,
-                             alert_text varchar2(!!alert_length)
-                         ) TABLESPACE TOOLS';
+                             alert_text varchar2(~~alert_length)
+                         ) TABLESPACE ~tbstools';
       END IF;
       EXECUTE IMMEDIATE 'create index alert_log_idx on alert_log(alert_date)';
    ELSE
@@ -1934,13 +1932,14 @@ BEGIN
    select count(DIRECTORY_NAME) into dir_exist from dba_directories
     where DIRECTORY_NAME='BDUMP';
 --    and owner in ('SYSTEM','SYS');
-   IF dir_exist <> 0 THEN
-      v_sql := 'drop directory BDUMP';
-      EXECUTE IMMEDIATE v_sql;
+   IF dir_exist = 0 THEN
+--      v_sql := 'drop directory BDUMP';
+--      EXECUTE IMMEDIATE v_sql;
+--   END IF;
+     v_sql := 'create directory BDUMP as ''' || bdump || '''';
+     EXECUTE IMMEDIATE v_sql;
    END IF;
-   v_sql := 'create directory BDUMP as ''' || bdump || '''';
-   EXECUTE IMMEDIATE v_sql;
--- sbdump string used with prompt below
+-- sbdump string used in prompts below
    IF substr(bdump,2,1) = ':' THEN
       :sbdump := bdump || '\'; -- Windows path'
    ELSE
@@ -2003,7 +2002,7 @@ declare
 
 begin
 -- find a starting date : last audit
-  select max(to_date(date_aud)) into max_date from histaudit
+  select max(to_date(date_aud)) into max_date from &tblhist
                 where to_date(date_aud) < trunc(sysdate);
   select count(*) into rows_total from alert_log_disk;
 
@@ -2165,15 +2164,13 @@ select to_char(round(&sbsize/1024/1024,2),'99G999G990D00') from dual;
 prompt Mb)</b></font></td></tr></table></td></tr>
 prompt <tr><td width=20%><b>Date</b></td><td width=80%><b>Texte</b></td></tr>
 
-set serveroutput on
-
 -- http://www.adp-gmbh.ch/ora/admin/scripts/read_alert_log.html
 -- http://www.adp-gmbh.ch/ora/admin/read_alert/index.html
 -- http://www.dba-oracle.com/t_writing_alert_log_message.htm
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN a.alert_text LIKE '%<b> (message repeated %' THEN '<b>'||to_char(a.alert_date,'DD/MM/RR HH24:MI')||'</b>' ELSE to_char(a.alert_date,'DD/MM/RR HH24:MI') END,'</td>', '<td bgcolor="LIGHTBLUE">',a.alert_text,'</td>','</tr>'
   from alert_log a
---       (select max(to_date(date_aud)) date_aud from histaudit
+--       (select max(to_date(date_aud)) date_aud from &tblhist
 --                where to_date(date_aud) < trunc(sysdate)) d
  where (alert_text like '%ORA-%'
   or alert_text like '%TNS-%'
@@ -2187,7 +2184,7 @@ DECLARE cnt_obj number := 0;
 BEGIN
    select count(a.alert_date) into cnt_obj
    from alert_log a
---        (select max(to_date(date_aud)) date_aud from histaudit
+--        (select max(to_date(date_aud)) date_aud from &tblhist
 --               where to_date(date_aud) < trunc(sysdate)) d
    where (alert_text like '%ORA-%'
      or alert_text like '%TNS-%'
