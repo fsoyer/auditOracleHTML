@@ -15,12 +15,12 @@ For a wider understanding, I'll translate parts from french to english, step by 
 ----------------------------------
 # USAGE
 * IMPORTANT : this script must be executed under sqlplus, as SYSTEM
-  If SYSTEM access is not permitted, it needs to be executed by a user with right SELECT ANY DICTIONARY granted
+  If SYSTEM access is not permitted, it needs to be executed by a user with at least this privileges :
 ```
     CREATE USER MyAuditUser IDENTIFIED BY "password";
     ALTER USER MyAuditUser DEFAULT TABLESPACE TOOLS;
     ALTER USER MyAuditUser QUOTA UNLIMITED ON TOOLS;
-    GRANT CONNECT, SELECT ANY DICTIONARY TO MyAuditUser;
+    GRANT CONNECT, SELECT ANY DICTIONARY, CREATE ANY DIRECTORY TO MyAuditUser;
 ```
 * IMPORTANT : it's better (in fact, actually mandatory) if a tablespace "TOOLS" exists in the database for a table of audit history. If not, the table can be created in tablespace SYSTEM (but the user must have write right).
 
@@ -103,3 +103,4 @@ For a wider understanding, I'll translate parts from french to english, step by 
 * 09/2018 ajout des informations sur la Flash recovery area
 * 2019-2020 some display and format improvements here and there.
 * 10/2020 v3.4 script modification to be launched by a normal user instead of SYSTEM
+* 11/2020 tablespace name and table name in variables for audit historic
