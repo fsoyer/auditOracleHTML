@@ -1,5 +1,4 @@
 -- AUDIT BASES ORACLE
--- v3.4
 -- Compatible Oracle 10g to 19c
 -- (c) 2005, Frank Soyer <frank.soyer@gmail.com>
 
@@ -17,24 +16,29 @@
 -- http://www.gnu.org/copyleft/gpl.html
 
 -- *********************************************** SCRIPT **************************************************
--- *************************************** Initialisation SQLPlus
+
+define script_version = 3.4
+
+-- *************************************** Initialize SQLPlus variables
 set pages 999
 set lines 200
--- set echo off
-set termout off
+--set echo off
+--set termout off
 set trims on
 set showmode off
 set verify off
 set feed off
 set serveroutput on size 1000000
 set head off
+-- "&" is used for HTML formatting. We need to change it for Oracle "DEFINE" special character
+set define "~"
 
 -- On force quelques formats
 ALTER SESSION SET NLS_NUMERIC_CHARACTERS = ", ";
 ALTER SESSION SET NLS_DATE_FORMAT = 'DD/MM/YYYY';
 ALTER SESSION SET NLS_DATE_LANGUAGE = 'FRENCH';
 
--- ************************************** CONSTANTES MODIFIABLES
+-- ************************************** CONSTANTS
 define tbstools = TOOLS
 define tblhist = HISTAUDIT
 define logfile = ORACLE
@@ -93,22 +97,16 @@ end if;
 END;
 /
 
--- *************************************** Variables et constantes
--- ATTENTION : AUCUN ESPACE DANS LES LISTES, SINON LA VARIABLE EST TRONQUEE !
+-- *************************************** Variables and constants
+-- BEWARE : NO SPACES IN LISTS, OR THE VARIABLE WILL BE TRUNCED !
 define sysusers = ('SYS','SYSTEM','CTXSYS','DBSNMP','OUTLN','ORDSYS','ORDPLUGINS','MDSYS','DMSYS','WMSYS','WKSYS','OLAPSYS','SYSMAN','XDB','EXFSYS','TSMSYS','MGMT_VIEW','ORACLE_OCM','DIP','SI_INFORMTN_SCHEMA','ANONYMOUS')
 define exusers = ('SCOTT','HR','OE','PM','QS','QS_ADM','QS_CBADM','QS_CS','QS_ES','QS_OS','QS_WS','SH','PERFAUDIT')
--- Icones (base64)
-variable tips varchar2(4000);
-begin
-   select 'iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAYAAAByUDbMAAAABmJLR0QAAAAAAAD5Q7t/AAAACXBIWXMAAAsQAAALEAGtI711AAAACXZwQWcAAAATAAAAEwDxf4yuAAACDElEQVQ4y62ULXDbQBBGnzsFK2YxHzyoMJk50NBhCWugYcpCA0PDEmjosphF0DBmEqvgwSs7MS1TgSz5v9OZdmd2NKNZvfv20+4Nmqbhf8XXcy9L5xpfFpTlGlfmaPiFxCNsMiZJppgkJbF2cPzd4FjZZrNpPpZPRHySJoIxYIzgveIc5KWCXHNz/8xkMhlchGWrH81qMWd+L6SpgOxVKug281xZZcrtw4LZ7FsP7Ntcr7MmW855fhoyHIFE0WEPEVDXiMJ4LJgY3t7mxLFtOoVfOo9Wi+88zOUENDCuT4kiEBABM4LZVHhfPFI61/QwV6yxxmOtnIB8qPvsgCIgkXCdQFwXuGJDDyvyjOvxoUcdaD86IEJfm15BkX/sYL4ssFa4FCY+8k+3T4F4CN7tKQsakMusy6Gtf1qFHSyWGA26OxFovD1RZOKIxtsDdaogw3gHM0nKT7edo7o+C+xAWtfbOiUoeA/GTnawdDyjKLbKjoAHXdV1P7woEJTSQTq+2cFsOsV5Q+mUqgKtQEN9AtUKqqqFhKoFhSjFpnvKEmsHtw+vLJeKd4oGbYEVhHwEQPgctb5uQZWHrIC7+Uu/9Gd3czZtB7L7/Z3ZYa+1bAO3j4e7efbWeF88EtcF6VW7NhJBFVqzu9bu5i9/vjW6KJ1rXLGhyD/w5YaggVhiTDIhHd9g08nf3Wf/Er8BAI4wKLDf6EwAAAAfelRYdENyZWF0aW9uIFRpbWUAAHjaMzDTNzLUNzABAAb7AYwMyT+gAAAALnpUWHRTb2Z0d2FyZQAAeNrzTUwuys9NTclMVHDLLEotzy/KLlbwjVAwMjAwAQCWLgl6ZrFa0gAAAABJRU5ErkJggg==' into :tips from dual;
-end;
-/
+-- Icons (base64)
+variable tips varchar2(2000);
+execute :tips := 'iVBORw0KGgoAAAANSUhEUgAAABMAAAATCAYAAAByUDbMAAAABmJLR0QAAAAAAAD5Q7t/AAAACXBIWXMAAAsQAAALEAGtI711AAAACXZwQWcAAAATAAAAEwDxf4yuAAACDElEQVQ4y62ULXDbQBBGnzsFK2YxHzyoMJk50NBhCWugYcpCA0PDEmjosphF0DBmEqvgwSs7MS1TgSz5v9OZdmd2NKNZvfv20+4Nmqbhf8XXcy9L5xpfFpTlGlfmaPiFxCNsMiZJppgkJbF2cPzd4FjZZrNpPpZPRHySJoIxYIzgveIc5KWCXHNz/8xkMhlchGWrH81qMWd+L6SpgOxVKug281xZZcrtw4LZ7FsP7Ntcr7MmW855fhoyHIFE0WEPEVDXiMJ4LJgY3t7mxLFtOoVfOo9Wi+88zOUENDCuT4kiEBABM4LZVHhfPFI61/QwV6yxxmOtnIB8qPvsgCIgkXCdQFwXuGJDDyvyjOvxoUcdaD86IEJfm15BkX/sYL4ssFa4FCY+8k+3T4F4CN7tKQsakMusy6Gtf1qFHSyWGA26OxFovD1RZOKIxtsDdaogw3gHM0nKT7edo7o+C+xAWtfbOiUoeA/GTnawdDyjKLbKjoAHXdV1P7woEJTSQTq+2cFsOsV5Q+mUqgKtQEN9AtUKqqqFhKoFhSjFpnvKEmsHtw+vLJeKd4oGbYEVhHwEQPgctb5uQZWHrIC7+Uu/9Gd3czZtB7L7/Z3ZYa+1bAO3j4e7efbWeF88EtcF6VW7NhJBFVqzu9bu5i9/vjW6KJ1rXLGhyD/w5YaggVhiTDIhHd9g08nf3Wf/Er8BAI4wKLDf6EwAAAAfelRYdENyZWF0aW9uIFRpbWUAAHjaMzDTNzLUNzABAAb7AYwMyT+gAAAALnpUWHRTb2Z0d2FyZQAAeNrzTUwuys9NTclMVHDLLEotzy/KLlbwjVAwMjAwAQCWLgl6ZrFa0gAAAABJRU5ErkJggg=='
 
-variable info varchar2(4000);
-begin
-   select 'R0lGODlhFAAUAOfAAD+JSDyVQEqTTFqTZkedQ0eeQ1CjRVKlRmScdWaccGibdVepRmSlUVqqSV2pUlytSG6jfXWjf2OxTGayS2SzSW+ueXGxVmqzWXGyb2y3TW22Vm64TnC6TXC7T3y2YX+2bXq2fna+UHu5c323gom2b3e/Unm+W3q+X328cHnBUYS8Y3rBUZ+uooe5fIO8gn3EUoHAb4W+f4DDYYPBbn/FU6OyqITBcX/GUYDGU4LEYZK+coHHVILIU4jCgI7DZYfEcZK/i6q2pYvDgae3qZXCdIPLUqi3rIrHaofJYo/EfYvHco7FgZDDkIrKXojMVYjNVYnNVZHIgpTGkZXGkYzPVqe/r7O9qZjIko/RV6DJd7O/rJrKk5vPYJzKlZTSYJPUV5PVVpPVV5/KpLLDsqPJppPWVp/MmpXWWLPEsrnDraHMpKLNo6LNpKTOpaXPpbfItp3ZYqrOs6fRornKtqnQsZ3dWq/Qr5/eWqrYeaLdZarbZLDSr6/Ss6/SubDSuMHMxcXLxbHTtaPhWsbMxbLVrLLUtsLOxbLVtrPVtqved7nXoLXWvrnVvbnXu7ranM3Rx8nUt8rSysvSyb3cn8/TyMvWuK/mbL3dna7rW8bfy9zX3sjgzd3Z4cnhzcnhzt3a4d7a4bvzYOLe47/3X+Tg5dbqw+fi5dDvq+Tk5Ojj5+Xl5cb8Y+bm5unl6Nnr3url6tvr4Orp6+7p7O7q7ezr7ezs7O7t7u7u7ubx6Ojy6vDw8PHx8fH38/f29/f5+Pr7+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////yH+EUNyZWF0ZWQgd2l0aCBHSU1QACH5BAEKAP8ALAAAAAAUABQAAAj+AP8JHEiwoMGDCBMKlPWnShVDsxQK1FUDQR9XsBZBMLIroSkFcTZ54pUrUyc/EVodrDWATiA+uIABY4So0KEEtwyyqCBGzZpGwHyRcdOGzYghvQimAgCCiRQzcvbY6bLlyhQXAl4RBBQAQ4wehH7JBBJliRARBSIRHEPAAQoYM5LIbKHkh40LB94QRGOggYYTMo7I/IAkh4kJD+YQHLRAwoYSNJrI9PBkx4oOFCQRFMUgQwgcULzIVBGGCo8UFkgVDMLhhZMvcGT6uHOGyg0ttgqqIlEES55TMktZqlOGCKuDmnSASaTI0aVJeARlAZUQlRUumEKtGqUnDSqJtDgNPYJUidKnWBLTq1cYEAA7' into :info from dual;
-end;
-/
+variable info varchar2(2000);
+execute :info := 'R0lGODlhFAAUAOfAAD+JSDyVQEqTTFqTZkedQ0eeQ1CjRVKlRmScdWaccGibdVepRmSlUVqqSV2pUlytSG6jfXWjf2OxTGayS2SzSW+ueXGxVmqzWXGyb2y3TW22Vm64TnC6TXC7T3y2YX+2bXq2fna+UHu5c323gom2b3e/Unm+W3q+X328cHnBUYS8Y3rBUZ+uooe5fIO8gn3EUoHAb4W+f4DDYYPBbn/FU6OyqITBcX/GUYDGU4LEYZK+coHHVILIU4jCgI7DZYfEcZK/i6q2pYvDgae3qZXCdIPLUqi3rIrHaofJYo/EfYvHco7FgZDDkIrKXojMVYjNVYnNVZHIgpTGkZXGkYzPVqe/r7O9qZjIko/RV6DJd7O/rJrKk5vPYJzKlZTSYJPUV5PVVpPVV5/KpLLDsqPJppPWVp/MmpXWWLPEsrnDraHMpKLNo6LNpKTOpaXPpbfItp3ZYqrOs6fRornKtqnQsZ3dWq/Qr5/eWqrYeaLdZarbZLDSr6/Ss6/SubDSuMHMxcXLxbHTtaPhWsbMxbLVrLLUtsLOxbLVtrPVtqved7nXoLXWvrnVvbnXu7ranM3Rx8nUt8rSysvSyb3cn8/TyMvWuK/mbL3dna7rW8bfy9zX3sjgzd3Z4cnhzcnhzt3a4d7a4bvzYOLe47/3X+Tg5dbqw+fi5dDvq+Tk5Ojj5+Xl5cb8Y+bm5unl6Nnr3url6tvr4Orp6+7p7O7q7ezr7ezs7O7t7u7u7ubx6Ojy6vDw8PHx8fH38/f29/f5+Pr7+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////yH+EUNyZWF0ZWQgd2l0aCBHSU1QACH5BAEKAP8ALAAAAAAUABQAAAj+AP8JHEiwoMGDCBMKlPWnShVDsxQK1FUDQR9XsBZBMLIroSkFcTZ54pUrUyc/EVodrDWATiA+uIABY4So0KEEtwyyqCBGzZpGwHyRcdOGzYghvQimAgCCiRQzcvbY6bLlyhQXAl4RBBQAQ4wehH7JBBJliRARBSIRHEPAAQoYM5LIbKHkh40LB94QRGOggYYTMo7I/IAkh4kJD+YQHLRAwoYSNJrI9PBkx4oOFCQRFMUgQwgcULzIVBGGCo8UFkgVDMLhhZMvcGT6uHOGyg0ttgqqIlEES55TMktZqlOGCKuDmnSASaTI0aVJeARlAZUQlRUumEKtGqUnDSqJtDgNPYJUidKnWBLTq1cYEAA7'
 
 column bname new_value dbname noprint
 column hname new_value hstname noprint
@@ -123,24 +121,25 @@ column bdate new_value dateaudit noprint
 select to_char(to_date(sysdate),'ddmmyy') as bdate from dual;
 
 set termout on
-prompt ******** AUDIT &dbname (&hstname) ***********************
+prompt ******** AUDIT ~dbname (~hstname) ***********************
 set termout off
 
-spool &logfile._&dbname._&hstname._&dateaudit..html
+spool ~logfile._~dbname._~hstname._~dateaudit..html
 
--- *************************************** Entete
+-- *************************************** Headers
 prompt <!DOCTYPE public "-//w3c//dtd html 4.01 strict//en" "http://www.w3.org/TR/html4/strict.dtd">
 prompt <html>
 prompt <head>
 prompt <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 prompt <meta name="description" content="Audit Oracle HTML">
-prompt <title>Audit &dbname (&hstname)</title>
+prompt <title>Audit ~dbname (~hstname)</title>
 prompt </head>
 prompt <BODY BGCOLOR="#003366">
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center> 
-prompt <font color=WHITE size=+2><b>Audit &dbname (&hstname)
+prompt <font color=WHITE size=+2><b>Audit ~dbname (~hstname)
 select ' du ',to_char(to_date(sysdate),'DD-MON-YYYY',N'NLS_DATE_LANGUAGE = AMERICAN'),'</b>' as DATE_AUDIT from dual;
+prompt <font size=1>(v~script_version)</font>
 prompt </font></td></tr></table>
 prompt <br>
 
@@ -149,13 +148,11 @@ prompt <hr>
 prompt <div align=center><b><font color="WHITE">SECTION INFORMATIONS</font></b></div>
 prompt <hr>
 
--- *************************************** Historique audit
+-- *************************************** audit historic
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Historique d&#39;audits</b></font></td></tr>
 -- Creation table HISTAUDIT si necessaire
 prompt <tr><td width=20%><b>Table historique</b></td>
---prompt <td bgcolor="LIGHTBLUE">
-set define "~"
 
 -- force sqlplus to exit on error, tablespace TOOLS (or whatever is in variable "tbstools") is mandatory
 WHENEVER sqlerror EXIT sql.sqlcode
@@ -238,13 +235,10 @@ WHENEVER sqlerror CONTINUE;
 prompt </td></tr>
 prompt <tr><td width=20%><b>Pr&eacute;c&eacute;dent audit</b></td>
 prompt <td bgcolor="LIGHTBLUE">
--- select decode(max(to_date(date_aud)),'','N/A',max(to_date(date_aud))) from &tblhist
---       where to_date(date_aud) < trunc(sysdate);
-set define "&"
 
 variable last_audit varchar2(100);
 begin
-      select decode(max(to_date(date_aud)),'','<font color="#FF0000"><b><i>Premier audit</i></b></font>',to_char(max(to_date(date_aud)),'DD-MON-YYYY',N'NLS_DATE_LANGUAGE = AMERICAN')) into :last_audit from &tblhist
+      select decode(max(to_date(date_aud)),'','<font color="#FF0000"><b><i>Premier audit</i></b></font>',to_char(max(to_date(date_aud)),'DD-MON-YYYY',N'NLS_DATE_LANGUAGE = AMERICAN')) into :last_audit from ~tblhist
       where to_date(date_aud) < trunc(sysdate);
 end;
 /
@@ -253,11 +247,9 @@ prompt </td></tr></table><br>
 
 -- *************************************** Hote
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>H&ocirc;te (informations OS)</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE"><b>Host</b></td><td bgcolor="WHITE"><b>OS</b></td><td bgcolor="WHITE"><b>CPUs</b></td><td bgcolor="WHITE"><b>Cores/CPU</b></td><td bgcolor="WHITE"><b>RAM</b></td>
-set define "&"
-prompt <tr><td bgcolor="LIGHTBLUE" width=20%>&hstname</td>
+prompt <tr><td bgcolor="LIGHTBLUE" width=20%>~hstname</td>
 select '<td bgcolor="LIGHTBLUE" width=20%>',PLATFORM_NAME,'</td><td bgcolor="LIGHTBLUE" width=20%>',cpu.VALUE,'</td><td bgcolor="LIGHTBLUE" width=20%>',decode(core.VALUE,NULL,'-',core.VALUE), '</td><td bgcolor="LIGHTBLUE" width=20% align=right>', to_char(round(ram.VALUE/(1024*1024),2),'99G999G990D00'), ' Mo'
 from v$database, v$osstat cpu
 left outer join v$osstat core
@@ -280,31 +272,70 @@ BEGIN
    end if;
 end;
 /
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>H&ocirc;te (statistiques Oracle)</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE"><b>Sockets (courants)</b></td><td bgcolor="WHITE"><b>CPUs logiques (courants) / Coeurs (courants)</b></td><td bgcolor="WHITE"><b>Sockets (highwater)</b></td><td bgcolor="WHITE"><b>CPUs logiques (highwater) / Cores (highwater)</b></td><td bgcolor="LIGHTGREY"></td></tr>
-set define "&"
 select '<td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_CURRENT,NULL,'-',CPU_SOCKET_COUNT_CURRENT), '</td><td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_CURRENT,' / ', decode(CPU_CORE_COUNT_CURRENT,NULL,'-',CPU_CORE_COUNT_CURRENT), '</td><td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_HIGHWATER,NULL,'-',CPU_SOCKET_COUNT_HIGHWATER), '</td><td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_HIGHWATER, ' / ', decode(CPU_CORE_COUNT_HIGHWATER,NULL,'-',CPU_CORE_COUNT_HIGHWATER), '</td><td bgcolor="LIGHTGREY"> </td></tr>' from v$license;
+
+prompt </td></tr>
+prompt </table>
+prompt <br>
+
 -- *************************************** Usage hote
-set define off
-prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Usage CPU (valeurs instantan&eacute;es)</b></font></td></tr>
-set define "&"
--- TODO : améliorer la requête ci-dessous VOIR : http://www.oracle.com/technetwork/articles/schumacher-analysis-099313.html
-select '<tr><td bgcolor="LIGHTBLUE" colspan=2>', metric_name, '</td><td bgcolor="LIGHTBLUE" align=right colspan=3>', round(value,2), '%</td></tr>'
+prompt <table border=1 width=100% bgcolor="WHITE">
+prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Usage CPU (valeurs instantan&eacute;es)</b></font></td></tr>
+prompt <tr><td bgcolor="WHITE" colspan=2><b>Statistique</b></td><td bgcolor="WHITE" colspan=2><b>Valeur</b></td>
+
+-- http://www.oracle.com/technetwork/articles/schumacher-analysis-099313.html
+select '<tr><td bgcolor="LIGHTBLUE" colspan=2>', metric_name, '</td><td bgcolor="LIGHTBLUE" align=right colspan=2>', round(value,2), '%</td></tr>'
 from SYS.V_$SYSMETRIC
 where METRIC_NAME IN ('Database CPU Time Ratio', 'Database Wait Time Ratio')
 AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC)
 Order by 2 asc;
+prompt </td></tr>
+
+prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Usage CPU d&eacute;taill&eacute;</b></font></td></tr>
+prompt <tr><td bgcolor="WHITE"><b>Statistique</b></td><td bgcolor="WHITE"><b>Minimum</b></td><td bgcolor="WHITE"><b>Maximum</b></td><td bgcolor="WHITE"><b>Moyenne</b></td>
+
+select CASE METRIC_NAME
+ WHEN 'SQL Service Response Time' then '<tr><td bgcolor="LIGHTBLUE">SQL Service Response Time (secs)</td>'
+ WHEN 'Response Time Per Txn' then '<tr><td bgcolor="LIGHTBLUE">Response Time Per Txn (secs)</td>'
+ELSE '<tr><td bgcolor="LIGHTBLUE">'||METRIC_NAME||'</td>'
+END METRIC_NAME,
+CASE METRIC_NAME
+ WHEN 'SQL Service Response Time' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MINVAL / 100),2),'999G990D00')||'</td>'
+ WHEN 'Response Time Per Txn' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MINVAL / 100),2),'999G990D00')||'</td>'
+ELSE '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MINVAL / 100),2),'999G990D00')||'</td>'
+END MININUM,
+CASE METRIC_NAME
+ WHEN 'SQL Service Response Time' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MAXVAL / 100),2),'999G990D00')||'</td>'
+ WHEN 'Response Time Per Txn' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MAXVAL / 100),2),'999G990D00')||'</td>'
+ELSE '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MAXVAL / 100),2),'999G990D00')||'</td>'
+END MAXIMUM,
+CASE METRIC_NAME
+ WHEN 'SQL Service Response Time' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((AVERAGE / 100),2),'999G990D00')||'</td>'
+ WHEN 'Response Time Per Txn' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((AVERAGE / 100),2),'999G990D00')||'</td>'
+ELSE '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((AVERAGE / 100),2),'999G990D00')||'</td></tr>'
+END AVERAGE
+ from SYS.V_$SYSMETRIC_SUMMARY 
+ where METRIC_NAME in ('CPU Usage Per Sec',
+ 'CPU Usage Per Txn',
+ 'Database CPU Time Ratio',
+ 'Database Wait Time Ratio',
+ 'Executions Per Sec',
+ 'Executions Per Txn',
+ 'Response Time Per Txn',
+ 'SQL Service Response Time',
+ 'User Transaction Per Sec')
+ ORDER BY 1;
 
 prompt </td></tr>
 prompt </table>
 prompt <br>
 
 -- *************************************** Versions
-delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='VERS';
+delete from ~tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='VERS';
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Versions</b></font></td></tr>
-set define "~"
 
 -- Add <td> if no rows are returned (first audit)
 select decode(count(valeur), 0, '<tr><td bgcolor="LIGHTBLUE" colspan=5>')
@@ -316,20 +347,17 @@ select decode(banner, valeur, '<tr><td bgcolor="LIGHTBLUE" colspan=5>','<tr><td 
  and to_date(date_aud) = (select max(to_date(date_aud)) from ~tblhist where type_obj = 'VERS');
 
 select banner,'<br>' from v$version;
-set define "&"
 prompt </td></tr>
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (VERSION)
-insert into &tblhist (
+insert into ~tblhist (
 select sysdate, 'VERS', 'Oracle Database', 0, 0, banner
 from v$version
   where banner like 'Oracle Database%');
 
 -- *************************************** Patchs installés
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Patchs install&eacute;s</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE"><b>Date</b></td><td bgcolor="WHITE"><b>Action</b></td><td bgcolor="WHITE"><b>Version</b></td><td bgcolor="WHITE"><b>ID</b></td><td bgcolor="WHITE"><b>Description</b></td>
-set define "&"
 
 select '<tr><td bgcolor="LIGHTBLUE">',to_char(ACTION_TIME,'DD/MM/YYYY'), '</td><td bgcolor="LIGHTBLUE">', ACTION, '</td><td bgcolor="LIGHTBLUE">', VERSION, '</td><td bgcolor="LIGHTBLUE">', ID, '</td><td bgcolor="LIGHTBLUE">', COMMENTS,'</td></tr>'
    from sys.registry$history
@@ -345,19 +373,18 @@ end;
 /
 
 -- *************************************** Options installées et utilisées
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Composants install&eacute;s</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE" align=center colspan=2><b>Composant</b></font></td><td bgcolor="WHITE" align=center><b>ID</b></font></td><td bgcolor="WHITE" align=center><b>Statut</b></font></td><td bgcolor="WHITE" align=center><b>Version</b></font></td></tr>
-set define "&"
+
 select '<tr><td bgcolor="LIGHTBLUE" colspan=2>',COMP_NAME,'</td><td bgcolor="LIGHTBLUE">', COMP_ID,'</td><td bgcolor="LIGHTBLUE">',STATUS,'</td><td bgcolor="LIGHTBLUE">',VERSION,'</td></tr>' from DBA_REGISTRY;
-set define off
+
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Options install&eacute;es</b></font></td></tr>
-set define "&"
+
 SELECT DISTINCT '<tr><td bgcolor="LIGHTBLUE" colspan=5>',PARAMETER,'</td>','</tr>' FROM V$OPTION where VALUE = 'TRUE' order by 1;
-set define off
+
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Fonctions principales</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonction</b></font></td><td bgcolor="WHITE" align=center><b>activ&eacute;e oui/non (derni&egrave;re date d&#39;usage)</b></font></td></tr>
-set define "&"
+
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>',version || ' - ' || name,'</td><td bgcolor="LIGHTBLUE" align=right>',CURRENTLY_USED || ' (' || decode(last_usage_date,NULL,'NONE',to_char(last_usage_date)) || ')</td></tr>' from dba_feature_usage_statistics where (detected_usages > 0 or name = 'Automatic Workload Repository') order by version;
 
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','Control management pack (diagnostic pack, tuning pack)','</td><td bgcolor="LIGHTBLUE" align=right>', to_char(display_value) || '</td></tr>' from v$parameter
@@ -367,25 +394,21 @@ prompt </table>
 prompt <br>
 
 -- *************************************** SPFILE ou init.ora ?
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
-set define off
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
 prompt " width="20" height="20" alt="Tips..." title="Si l'instance est lanc&eacute;e avec un fichier SPFILE le chemin de celui-ci est affich&eacute;. Dans le cas contraire on affiche seulement 'PFILE' car le chemin du fichier texte init.ora n'est pas disponible dans les tables syst&egrave;me."></td>
-set define "&"
 
 prompt <td align=center><font color="WHITE"><b>Initialisation : pfile (init.ora) ou spfile ?</b></font></td></tr></table></td></tr>
 SELECT decode(value,'','<td bgcolor="ORANGE" width=15%>PFILE</td>','<td bgcolor="#33FF33" width=15%>SPFILE</td>'), decode(value,'','<td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td></tr>','<td>'||value||'</td></tr>') FROM v$parameter WHERE name like 'spfile' ;
--- "host echo $ORACLE_HOME;" affiche bien la variable dans sqlplus mais pas avec spool. 
+-- TODO : "host echo $ORACLE_HOME;" affiche bien la variable dans sqlplus mais pas avec spool. 
 
 prompt </table>
 prompt <br>
 
 -- *************************************** NLS_PARAMETERS
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Param&egrave;tres NLS Instance</b></font></td></tr>
 prompt <tr><td width=50%><b>Param&egrave;tre</b></td><td width=50%><b>Valeur</b></td>
 select '<tr><td bgcolor="LIGHTBLUE">',parameter,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$nls_parameters;
@@ -405,7 +428,6 @@ prompt " width="20" height="20" alt="Tips..." title="Les principaux param&egrave
 prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Autres param&egrave;tres d&#39;initialisation (instance)</b></font></td></tr></table></td></tr>
 prompt <tr><td width=20%><b>Param&egrave;tre</b></td><td width=50%><b>Valeur</b></td>
 
-set define "&"
 column audcnt new_value vaudcnt noprint
 select count(*) as audcnt from sys.aud$;
 column audsze new_value vaudsze noprint
@@ -425,57 +447,54 @@ select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',va
 'diagnostic_dest',
 'db_cache_advice')
 union
-select '<tr><td bgcolor="LIGHTBLUE">', au.name, '</td>', '<td bgcolor="'|| decode(lower(au.value), 'none', '#33FF33', 'ORANGE') || '">', decode(lower(au.value), 'os', au.value||' ('||aup.value||')', 'xml', au.value||' ('||aup.value||')', 'xml, extended', au.value||' ('||aup.value||')', au.value) || ' (table AUD$ = ' || &vaudcnt || ' rows, '|| trim(to_char(&vaudsze,'999G999G999G990D00')) ||' Mo)','</td>','</tr>' from v$parameter au, v$parameter aup where au.name='audit_trail' and aup.name='audit_file_dest';
+select '<tr><td bgcolor="LIGHTBLUE">', au.name, '</td>', '<td bgcolor="'|| decode(lower(au.value), 'none', '#33FF33', 'ORANGE') || '">', decode(lower(au.value), 'os', au.value||' ('||aup.value||')', 'xml', au.value||' ('||aup.value||')', 'xml, extended', au.value||' ('||aup.value||')', au.value) || ' (table AUD$ = ' || ~vaudcnt || ' rows, '|| trim(to_char(~vaudsze,'999G999G999G990D00')) ||' Mo)','</td>','</tr>' from v$parameter au, v$parameter aup where au.name='audit_trail' and aup.name='audit_file_dest';
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (PARAMETRES INIT)
-delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='INIT';
-insert into &tblhist (
+delete from ~tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='INIT';
+insert into ~tblhist (
 select sysdate, 'INIT', substr(name,1,30), 0, 0, value
 from v$parameter
   where ISDEFAULT='FALSE'
   and name not like '%nls%');
--- NLS parameters change in instance according to client config. We keep only database parameters.
-insert into &tblhist (
+-- NLS session parameters change in instance according to client config. We keep only database parameters.
+insert into ~tblhist (
 select sysdate, 'INIT', substr(parameter,1,30), 0, 0, value
 from nls_database_parameters);
 
 -- *************************************** Modifies lors du dernier audit ?
 prompt <tr>
-set define "~"
 select decode(max(to_date(date_aud)),'','<td width=20%><b>Principaux param&egrave;tres</b></td>','<td width=20%><b>Param&egrave;tres modifi&eacute;s depuis le dernier audit</b></td>') from ~tblhist
   where to_date(date_aud) < trunc(sysdate);
--- prompt <td width=20%><b>Param&egrave;tres modifi&eacute;s depuis le dernier audit</b></td>
-set define "&"
 
 DECLARE cnt_init number := 0;
 BEGIN
-  select count(H1.obj_name) into cnt_init from &tblhist H1, &tblhist H2
+  select count(H1.obj_name) into cnt_init from ~tblhist H1, ~tblhist H2
   where H1.obj_name = H2.obj_name
   and H1.type_obj = 'INIT'
   and H2.type_obj = 'INIT'
   and H1.valeur <> H2.valeur
   and trunc(to_date(H1.date_aud)) = trunc(sysdate)
-  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from &tblhist
+  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from ~tblhist
                            where to_date(date_aud) < trunc(sysdate));
 -- test if a parameter was initialized (ie added in the non-default parameters)
   if cnt_init=0 then
-     select count(H1.obj_name) into cnt_init from &tblhist H1
+     select count(H1.obj_name) into cnt_init from ~tblhist H1
      where H1.type_obj = 'INIT'
      and H1.obj_name not in
-        (select H2.obj_name from &tblhist H2
+        (select H2.obj_name from ~tblhist H2
          where H2.type_obj = 'INIT'
-         and to_date(H2.date_aud) = (select max(to_date(date_aud)) from &tblhist
+         and to_date(H2.date_aud) = (select max(to_date(date_aud)) from ~tblhist
                              where to_date(date_aud) < trunc(sysdate)))
      and trunc(to_date(H1.date_aud)) = trunc(sysdate);
   end if;
 -- test if a parameter was resetted (ie deleted from non-default parameters)
   if cnt_init=0 then
-  select count(H2.obj_name) into cnt_init from &tblhist H2
+  select count(H2.obj_name) into cnt_init from ~tblhist H2
      where H2.type_obj = 'INIT'
-     and to_date(H2.date_aud) = (select max(to_date(date_aud)) from &tblhist
+     and to_date(H2.date_aud) = (select max(to_date(date_aud)) from ~tblhist
                                  where to_date(date_aud) < trunc(sysdate))
      and H2.obj_name not in
-        (select H1.obj_name from &tblhist H1
+        (select H1.obj_name from ~tblhist H1
          where H1.type_obj = 'INIT'
          and trunc(to_date(H1.date_aud)) = trunc(sysdate));
   end if;
@@ -488,32 +507,32 @@ end;
 /
 
 select H1.obj_name, ' (', H2.valeur, ' -> ', H1.valeur, ')<br>' -- parametres modifies
-from &tblhist H1, &tblhist H2
+from ~tblhist H1, ~tblhist H2
   where H1.obj_name = H2.obj_name
   and H1.type_obj = 'INIT'
   and H2.type_obj = 'INIT'
   and H1.valeur <> H2.valeur
   and trunc(to_date(H1.date_aud)) = trunc(sysdate)
-  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from &tblhist
+  and to_date(H2.date_aud) = (select max(to_date(date_aud)) from ~tblhist
                            where to_date(date_aud) < trunc(sysdate))
 UNION
 select H1.obj_name, ' (', '<b>New</b>', ' -> ', H1.valeur, ')<br>' -- nouveaux parametres
-from &tblhist H1
+from ~tblhist H1
   where H1.type_obj = 'INIT'
   and H1.obj_name not in
-      (select H2.obj_name from &tblhist H2
+      (select H2.obj_name from ~tblhist H2
        where H2.type_obj = 'INIT'
-       and to_date(H2.date_aud) = (select max(to_date(date_aud)) from &tblhist
+       and to_date(H2.date_aud) = (select max(to_date(date_aud)) from ~tblhist
                            where to_date(date_aud) < trunc(sysdate)))
   and trunc(to_date(H1.date_aud)) = trunc(sysdate)
 UNION
 select H1.obj_name, ' (', H1.valeur, ' -> ', '<b>Default</b>', ')<br>' -- parametres réinitialises au defaut
-from (select * from &tblhist H
+from (select * from ~tblhist H
       where H.type_obj = 'INIT'
-       and to_date(H.date_aud) = (select max(to_date(date_aud)) from &tblhist
+       and to_date(H.date_aud) = (select max(to_date(date_aud)) from ~tblhist
                                   where to_date(date_aud) < trunc(sysdate))) H1
 where H1.obj_name not in
-(select H2.obj_name from &tblhist H2
+(select H2.obj_name from ~tblhist H2
  where H2.type_obj = 'INIT'
  and trunc(to_date(H2.date_aud)) = trunc(sysdate))
 order by 1;
@@ -533,12 +552,8 @@ prompt <br>
 
 -- *************************************** Informations Generales
 prompt <table border=1 width=100% bgcolor="WHITE">
---NE PLUS INTERPRETER LE "&" par sqlplus POUR L'INSTANT, le HTML en a besoin
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Informations g&eacute;n&eacute;rales</b></font></td></tr>
 prompt <tr><td width=20%><b>Base cr&eacute;&eacute;e le</b></td>
---INTERPRETER A NOUVEAU LE "&"
-set define "&"
 prompt <td bgcolor="LIGHTBLUE">
 select CREATED from v$database;
 prompt </td></tr><tr>
@@ -548,7 +563,7 @@ select STARTUP_TIME from v$instance;
 prompt </td></tr><tr>
 prompt <td><b>Taille de blocs</b></td>
 prompt <td bgcolor="LIGHTBLUE">
-prompt  &dbloc octets
+prompt  ~dbloc octets
 prompt </td></tr>
 prompt <td><b>Type de processus SERVERS</b></td>
 prompt <td bgcolor="LIGHTBLUE">
@@ -562,10 +577,8 @@ prompt </td></tr>
 prompt <tr><td width=20%><b>Archive log mode</b></td>
 select decode(log_mode,'ARCHIVELOG','<td bgcolor="#33FF33">','<td bgcolor="#FF9900">'),log_mode,'<br>' from v$database;
 prompt </td></tr>
-
 prompt <tr><td width=20%><b>Archive log destination</b></td>
---select distinct decode(d.log_mode,'ARCHIVELOG','<td bgcolor="LIGHTBLUE">', '<td bgcolor="LIGHTGREY">') from v$database d,v$parameter p where (p.name like 'log_archive_dest_%' or p.name = 'log_archive_dest') and p.name not like '%state%' and p.value is not NULL;
-set define off
+
 DECLARE
 arch_mode number := 0;
 cnt_dest number := 0;
@@ -601,22 +614,19 @@ BEGIN
    end if;
 end;
 /
-set define "&"
+
 -- *************************************** Flash recovery area
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="En cas de fort remplissage de la FRA, v&eacute;rifier le contenu par : SELECT * FROM V$RECOVERY_AREA_USAGE;"></td>
+prompt " width="20" height="20" alt="Info..." title="En cas de fort remplissage de la FRA, v&eacute;rifier le contenu par : SELECT * FROM V$RECOVERY_AREA_USAGE;">
+prompt &nbsp;&nbsp;<img src="data:image/gif;base64,
+print tips
+prompt " width="20" height="20" alt="Tips..." title="Attention : supprimer sur disque les archives de la FRA ne suffit pas &agrave; r&eacute;cup&eacute;rer l'espace. La FRA est g&eacute;r&eacute;e logiquement. Il est n&eacute;cessaire d'ex&eacute;cuter ' CROSSCHECK ARCHIVELOG ALL; ' et ' DELETE EXPIRED ARCHIVELOG ALL; ' sous RMAN pour qu'Oracle lib&egrave;re l'espace."></td>
 prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Informations Flash Recovery Area</b></font></td></tr></table></td></tr>
 prompt <tr><td  bgcolor="WHITE" width=20%><b>Chemin</b></td><td><b>Espace totale</b></td></td><td><b>Espace utilis&eacute;</b></td></tr>
-set define "&"
 
--- https://docs.oracle.com/database/121/ADMQS/GUID-59C29B1D-8536-4C43-B999-46CC5F61F430.htm#ADMQS12106
--- mettre en note title que le rm des archives qui y seraient ne suffit pas : il faut ensuite rman crosscheck+delete expired pour libérer l'espace.
-
-set define off
 DECLARE
 fra_cnt number := 0;
 line varchar2(2000);
@@ -632,7 +642,6 @@ BEGIN
    end if;
 end;
 /
-set define "&"
 prompt </td></tr></table>
 prompt <br>
 
@@ -643,8 +652,8 @@ prompt <div align=center><b><font color="WHITE">SECTION STOCKAGE</font></b></div
 prompt <hr>
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (TABLESPACES ET SEGMENTS)
-delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TBS';
-insert into &tblhist (
+delete from ~tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TBS';
+insert into ~tblhist (
 select sysdate, 'TBS', t.tablespace_name, t.total, 
          decode(u.utilise,'',0,u.utilise), 0
 from (select df.tablespace_name,
@@ -654,7 +663,7 @@ from (select df.tablespace_name,
       and dt.contents not in ('UNDO')
       group by df.tablespace_name) t,
      (select tablespace_name,
-             round(sum(blocks)*&dbloc/(1024*1024),2) utilise
+             round(sum(blocks)*~dbloc/(1024*1024),2) utilise
       from dba_segments
       group by tablespace_name) u
 where t.tablespace_name=u.tablespace_name(+)
@@ -675,39 +684,39 @@ from (select tablespace_name,
       from dba_temp_files
       group by tablespace_name));
 
-delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='FIL';
-insert into &tblhist (
+delete from ~tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='FIL';
+insert into ~tblhist (
 select sysdate, 'FIL', file_name, 0, 0, 0
       from dba_data_files);
-insert into &tblhist (
+insert into ~tblhist (
 select sysdate, 'FIL', file_name, 0, 0, 0
       from dba_temp_files);
 
-delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TAB';
-insert into &tblhist (
+delete from ~tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='TAB';
+insert into ~tblhist (
 select sysdate, 'TAB', 'Total segments tables', total, 
          0, 0
 from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(1024*1024),2)) total
       from dba_segments
       where segment_type like 'TABLE%'
-      and owner not in &sysusers and owner not in &exusers));
-delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='IND';
-insert into &tblhist (
+      and owner not in ~sysusers and owner not in ~exusers));
+delete from ~tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='IND';
+insert into ~tblhist (
 select sysdate, 'IND', 'Total segments indexes', total, 
          0, 0
 from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(1024*1024),2)) total
       from dba_segments
       where segment_type like 'INDEX%'
-      and owner not in &sysusers and owner not in &exusers));
-delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='AUT';
-insert into &tblhist (
+      and owner not in ~sysusers and owner not in ~exusers));
+delete from ~tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='AUT';
+insert into ~tblhist (
 select sysdate, 'AUT', 'Total segments autres', total, 
          0, 0
 from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(1024*1024),2)) total
       from dba_segments
       where segment_type not like 'TABLE%'
       and segment_type not like 'INDEX%'
-      and owner not in &sysusers and owner not in &exusers));
+      and owner not in ~sysusers and owner not in ~exusers));
 
 -- *************************************** TABLESPACES
 prompt <hr>
@@ -718,25 +727,23 @@ prompt <hr>
 
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=6>
-set define off
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
 prompt " width="20" height="20" alt="Tips..." title="Les nouveaux tablespaces et fichiers cr&eacute;&eacute;s depuis le dernier audit apparaissent en orange"></td>
 prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Liste des datafiles par tablespace</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Taille (Mo)</b></td><td><b>Autoext.</b></td><td><b>Next</b></td><td><b>MaxSize</b></td></tr>
-set define "&"
 
 WITH list_tbs AS (
-select distinct OBJ_NAME,TYPE_OBJ from &tblhist
+select distinct OBJ_NAME,TYPE_OBJ from ~tblhist
 where type_obj in ('TBS','FIL')
-and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
+and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
                             where to_date(date_aud) < trunc(sysdate))
 )
 select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') and dt.contents NOT IN ('UNDO') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END||'</td>' as tbs,
  '<td bgcolor="'||CASE WHEN df.FILE_NAME NOT IN (select list_tbs.obj_name from list_tbs where type_obj='FIL') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||df.FILE_NAME||'</td>' as fname,
- '<td bgcolor="'||decode (CONTENTS,'UNDO','#33FF33',decode(autoextensible,'NO','#33FF33',CouleurLimite(sum(df.blocks)*&dbloc,(sum(df.maxbytes)-(sum(df.maxbytes)*0.20)),(sum(df.maxbytes)-(sum(df.maxbytes)*0.20))*0.10,1)))||'" align=right>'||decode(round(sum(df.bytes)/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.bytes)/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
+ '<td bgcolor="'||decode (CONTENTS,'UNDO','#33FF33',decode(autoextensible,'NO','#33FF33',CouleurLimite(sum(df.blocks)*~dbloc,(sum(df.maxbytes)-(sum(df.maxbytes)*0.20)),(sum(df.maxbytes)-(sum(df.maxbytes)*0.20))*0.10,1)))||'" align=right>'||decode(round(sum(df.bytes)/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.bytes)/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
  decode(autoextensible,'NO','<td bgcolor="#FF9900" align=right>OFF</td>','<td bgcolor="#33FF33" align=right>ON</td>') as autoext,
- '<td bgcolor="LIGHTBLUE" align=right>'||to_char(round(sum(increment_by)*&dbloc/(1024*1024),2),'99G999G990')||'</td>' as nsize,
+ '<td bgcolor="LIGHTBLUE" align=right>'||to_char(round(sum(increment_by)*~dbloc/(1024*1024),2),'99G999G990')||'</td>' as nsize,
 -- maxbytes always in bytes even if bigfile ?
  '<td bgcolor="LIGHTBLUE" align=right>'||to_char(decode(BIGFILE,'YES',round(sum(df.maxbytes)/(1024*1024),2),round(sum(df.maxbytes)/(1024*1024),2)),'99G999G990')||'</td>' as msize, '</tr>'
 from DBA_DATA_FILES df, DBA_TABLESPACES dt
@@ -744,16 +751,16 @@ where df.tablespace_name=dt.tablespace_name(+)
 group by df.tablespace_name, df.file_name, autoextensible, contents, bigfile
 order by 2,3;
 WITH list_tbs AS (
-select distinct OBJ_NAME,TYPE_OBJ from &tblhist
+select distinct OBJ_NAME,TYPE_OBJ from ~tblhist
 where type_obj in ('TBS','FIL')
-and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
+and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
                             where to_date(date_aud) < trunc(sysdate))
 )
 select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b><i>(default tmp)</i>' END||'</td>' as tbs,
  '<td bgcolor="'||CASE WHEN FILE_NAME NOT IN (select list_tbs.obj_name from list_tbs where type_obj='FIL') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||FILE_NAME||'</td>' as fname,
- '<td bgcolor="#33FF33" align=right>'||decode(round(sum(df.blocks)*&dbloc/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.blocks)*&dbloc/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
+ '<td bgcolor="#33FF33" align=right>'||decode(round(sum(df.blocks)*~dbloc/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.blocks)*~dbloc/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
  decode(autoextensible,'NO','<td bgcolor="#FF9900" align=right>OFF</td>', '<td bgcolor="#33FF33" align=right>ON</td>')as autoext,
- '<td bgcolor="LIGHTBLUE" align=right>'||to_char(round(sum(increment_by)*&dbloc/(1024*1024),2),'99G999G990')||'</td>' as nsize,
+ '<td bgcolor="LIGHTBLUE" align=right>'||to_char(round(sum(increment_by)*~dbloc/(1024*1024),2),'99G999G990')||'</td>' as nsize,
 -- maxbytes always in bytes even if bigfile ?
 -- '<td bgcolor="LIGHTBLUE" align=right>'||to_char(decode(BIGFILE,'YES',round(sum(df.maxbytes)/(1024*1024),2),round(sum(df.maxbytes)/(1024*1024),2)),'99G999G990')||'</td>' as msize, '</tr>'
 '<td bgcolor="LIGHTBLUE" align=right>'||to_char(decode(BIGFILE,'YES',round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2),round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2)),'99G999G990')||'</td>' as msize, '</tr>'
@@ -766,7 +773,6 @@ prompt </table><br>
 
 -- *************************************** Volumétrie tablespaces
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=10>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
@@ -777,10 +783,9 @@ prompt )</b></font></td></tr></table></td></tr>
 
 prompt <tr><td><b>Tablespace</b></td><td><b>Bigfile</b></td><td><b>Contenu</b></td><td><b>Statut</b></td><td width=13%><b>Taille max. totale (Mo) avec autoextend</b></td><td width=10%><b>Total actuel (Mo) sur disque</b></td><td width=10%><b>Utilis&eacute; (Mo)</b></td><td width=10%><b>Libre actuel/taille max. totale</b></td><td width=10%><b>Total sur disque depuis dernier audit (Mo)</b></td><td width=10%><b>Utilis&eacute; depuis dernier audit (Mo)</b></td></tr>
 
-set define "&"
 -- TABLESPACES DATAS
 WITH list_tbs AS (
-select distinct OBJ_NAME from &tblhist where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
+select distinct OBJ_NAME from ~tblhist where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
       where to_date(date_aud) < trunc(sysdate))
 )
 select '<tr>','<td bgcolor="'||CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">',CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END,t.tablespace_name,CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END,'</td>', '<td bgcolor="',decode(BIGFILE,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (BIGFILE,'YES','WHITE','BLACK'),'">', maxt.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">','<td bgcolor="#FF0000">'),maxt.status,'</td>',
@@ -814,20 +819,20 @@ from (select tablespace_name,
       where df.tablespace_name=dt.tablespace_name(+)
       group by df.tablespace_name, dt.contents, dt.status, BIGFILE) maxt,
      (select tablespace_name,
-             round(sum(blocks)*&dbloc/(1024*1024),2) utilise
+             round(sum(blocks)*~dbloc/(1024*1024),2) utilise
       from dba_segments
       group by tablespace_name) u,
      (select tablespace_name,
-             round(sum(blocks)*&dbloc/(1024*1024),2) libre
+             round(sum(blocks)*~dbloc/(1024*1024),2) libre
       from dba_free_space
       group by tablespace_name) l,
-      (select * from &tblhist
+      (select * from ~tblhist
          where trunc(to_date(date_aud))=trunc(sysdate)
          and type_obj='TBS') a,
-      (select * from &tblhist
+      (select * from ~tblhist
          where to_date(date_aud) like
-        (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
-            where to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
+        (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
+            where to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
       where to_date(date_aud) < trunc(sysdate))
             and type_obj='TBS')
          and type_obj='TBS') h
@@ -856,11 +861,11 @@ from (select tablespace_name, autoextensible,
       where df.tablespace_name=dt.tablespace_name(+)
       group by df.tablespace_name, df.autoextensible, dt.contents, dt.status, BIGFILE) maxt,
      (select tablespace_name,
-             round(sum(blocks)*&dbloc/(1024*1024),2) utilise
+             round(sum(blocks)*~dbloc/(1024*1024),2) utilise
       from dba_segments
       group by tablespace_name) u,
      (select tablespace_name,
-             round(sum(blocks)*&dbloc/(1024*1024),2) libre
+             round(sum(blocks)*~dbloc/(1024*1024),2) libre
       from dba_free_space
       group by tablespace_name) l
 where t.tablespace_name=u.tablespace_name(+)
@@ -924,19 +929,19 @@ from
 (select NVL(round(sum(bytes/(1024*1024)),2),0) total
       from dba_temp_files df, dba_tablespaces dt
       where df.tablespace_name = dt.tablespace_name and dt.bigfile='NO') ttn,
-     (select round(sum(blocks)*&dbloc/(1024*1024),2) utilise from dba_segments) du,
+     (select round(sum(blocks)*~dbloc/(1024*1024),2) utilise from dba_segments) du,
      (select 0 utilise from dual) tu, -- considere que temp est toujours 100% libre
-     (select round(sum(blocks)*&dbloc/(1024*1024),2) libre from dba_free_space) dl,
+     (select round(sum(blocks)*~dbloc/(1024*1024),2) libre from dba_free_space) dl,
      (select round(sum(bytes)/(1024*1024),2) libre from dba_temp_files) tl;
      
 select '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',to_char(round(sum(a.total-h.total)),'S99G999G990D00'),'</b></font></td>' as total, 
         '<td bgcolor="BLUE" align=right colspan=4><font color="WHITE"><b>',to_char(round(sum(a.utilis-h.utilis)),'S99G999G990D00'),'</b></font></td>' as utilise,'</tr>'
-from (select * from &tblhist
+from (select * from ~tblhist
 	where trunc(to_date(date_aud))=trunc(sysdate)
         and type_obj='TBS') a,
-(select * from &tblhist
+(select * from ~tblhist
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='TBS')
 	and type_obj='TBS') h
@@ -945,7 +950,6 @@ where a.obj_name=h.obj_name;
 prompt </table><br>
 
 -- TABLESPACE(S) SUPPRIME(S)
-set define "~"
 
 DECLARE
  tbsremoved_cnt number := 0;
@@ -972,7 +976,7 @@ BEGIN
    end if;
 END;
 /
-set define "&"
+
 -- *************************************** SEGMENTS
 prompt <hr>
 prompt <div align=center><b><font color="WHITE" size=2>SEGMENTS (Objets utilisateurs)</font></b></div>
@@ -980,22 +984,20 @@ prompt <hr>
 
 -- *************************************** Volumétrie tables et indexes
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>Volum&eacute;trie segments utilisateurs</b></font></td></tr>
 prompt <tr><td><b>Type de segments</b></td><td><b>Total (Mo)</b></td><td><b>Diff&eacute;rence de taille depuis le dernier audit (
 print last_audit
 prompt )</b></td></tr>
 
-set define "&"
 select  '<tr>','<td bgcolor="LIGHTBLUE">TABLES</td>',
         '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',decode(a.total, NULL, '0,00', to_char(round(a.total,2),'99G999G990D00')),'</b></font></td>',
         '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',decode(a.total, NULL, to_char(round(-l.total,2),'S99G999G990D00'), to_char(round(a.total-l.total,2),'S99G999G990D00')),'</b></font></td>','</tr>'
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type like 'TABLE%'
-        and owner not in &sysusers and owner not in &exusers) a,
-(select * from &tblhist
+        and owner not in ~sysusers and owner not in ~exusers) a,
+(select * from ~tblhist
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='TAB')
 	and type_obj='TAB') l;
@@ -1004,10 +1006,10 @@ select  '<tr>','<td bgcolor="LIGHTBLUE">INDEXES</td>',
         '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',decode(a.total, NULL, to_char(round(-l.total,2),'S99G999G990D00'), to_char(round(a.total-l.total,2),'S99G999G990D00')),'</b></font></td>','</tr>'
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type like 'INDEX%'
-        and owner not in &sysusers and owner not in &exusers) a,
-(select * from &tblhist
+        and owner not in ~sysusers and owner not in ~exusers) a,
+(select * from ~tblhist
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='IND')
 	and type_obj='IND') l;
@@ -1016,10 +1018,10 @@ select DISTINCT '<tr>','<td bgcolor="LIGHTBLUE">AUTRES (LOB SEGMENTS, LOB INDEXE
         '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',decode(a.total, NULL, to_char(round(-l.total,2),'S99G999G990D00'), to_char(round(a.total-l.total,2),'S99G999G990D00')),'</b></font></td>','</tr>'
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type not like 'TABLE%' and segment_type not like 'INDEX%'
-        and owner not in &sysusers and owner not in &exusers) a,
-(select * from &tblhist
+        and owner not in ~sysusers and owner not in ~exusers) a,
+(select * from ~tblhist
 	where to_date(date_aud) like
-	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from &tblhist
+	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
                 where trunc(to_date(date_aud)) < trunc(sysdate)
                 and type_obj='AUT')
 	and type_obj='AUT') l;
@@ -1041,12 +1043,10 @@ prompt </table><br>
 -- *************************************** Statistiques switchs REDO LOG
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" colspan=3>
-set define off
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
 prompt " width="20" height="20" alt="Tips..." title="ATTENTION : l&#39;historique des logs peut &ecirc;tre supprim&eacute; au fur et &agrave; mesure : ces statistiques risquent de ne pas &ecirc;tre viables."></td>
 prompt <td align=center><font color="WHITE"><b>Statistiques switchs REDO LOGS</b></font></td></tr></table></td></tr>
-set define "&"
 
 prompt <tr><td width=15%><b>Statistique</b></td><td width=15%><b>Date</b></td><td width=15%><b>Valeur</b></td></tr>
 prompt <tr><td bgcolor="LIGHTBLUE" valign=top>Nombre de switchs par jour (depuis 30 jours)</td>
@@ -1128,8 +1128,6 @@ prompt <hr>
 
 -- *************************************** contentions de basculement
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
-
 prompt <tr><td bgcolor="#3399CC" colspan=4>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
@@ -1140,7 +1138,6 @@ prompt " width="20" height="20" alt="Info..." title="voir messages 'Checkpoint n
 prompt <td align=center><font color="WHITE"><b>Contentions de basculement redo logs</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
 prompt <tr><td width=15%><b>Nom</b></td><td width=15%><b>Ev&egrave;nement</b></td><td width=15%><b>Wait (en secondes)</b></td><td width=15%><b>Etat</b></td></tr>
 
-set define "&"
 select '<tr>','<td bgcolor="LIGHTBLUE">',sid,'</td>','<td bgcolor="LIGHTBLUE">',event,'</td>','<td bgcolor="LIGHTBLUE">',seconds_in_wait,'</td>','<td bgcolor="LIGHTBLUE">',state,'</td>','</tr>'
 from v$session_wait
 where event like 'log%';
@@ -1159,7 +1156,6 @@ prompt </table><br>
 
 -- *************************************** Conflits d'acces disque
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
@@ -1170,41 +1166,14 @@ prompt " width="20" height="20" alt="Tips..." title="Si data block > 0 (trop de 
 prompt <td align=center><font color="WHITE"><b>Conflits d&#39;acc&egrave;s disque</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
 prompt <tr><td width=15%><b>Classe</b></td><td width=15%><b>Nombre</b></td></tr>
 
-set define "&"
 select '<tr>','<td bgcolor="LIGHTBLUE">',class,'</td>','<td bgcolor="',CouleurLimite(count,10000000,9990000,1),'" align=right>',count,'</td>','</tr>' from v$waitstat;
 
 prompt </table><br>
-
--- *************************************** Efficacite d'acces aux fichiers
--- EDIT 06/2013 : pas sur que ces informations servent vraiment... Il vaut mieux regarder les full scans
---prompt <table border=1 width=100% bgcolor="WHITE">
---set define off
---prompt <tr><td bgcolor="#3399CC" align=center colspan=4>
---prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
---print tips
---prompt " width="20" height="20" alt="Tips..." title="L'efficacit&eacute; d'acc&egrave;s indique le rapport entre les lectures/&eacute;critures et la r&eacute;partition des donn&eacute;es sur disque. Un ratio trop bas indique des acc&eacute;s concurrents trop fr&eacute;quents, soit des index et tables m&eacute;lang&eacute;es, ou des tables non tri&eacute;es acc&eacute;d&eacute;es fr&eacute;quemment."></td>
-
---prompt <td align=center><font color="WHITE"><b>Efficacit&eacute; des acc&egrave;s aux fichiers</b></font></td></tr></table></td></tr>
---prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Reads / Writes</b></td><td><b>Efficacit&eacute; (%)</b></td></tr>
---set define "&"
-
---select
---'<tr>','<td bgcolor="LIGHTBLUE">',f.tablespace_name,'</td>',
---'<td bgcolor="LIGHTBLUE">',f.file_name,'</td>',
---'<td bgcolor="LIGHTBLUE" align=right>',(v.phyrds+v.phywrts),'</td>',
---'<td bgcolor="',CouleurLimite(ROUND(100*(v.phyrds+v.phywrts)/(v.phyblkrd+v.phyblkwrt),0),60,20,0),'" align=right>',TO_CHAR(DECODE(v.phyblkrd,0,null,ROUND(100*(v.phyrds+v.phywrts)/(v.phyblkrd+v.phyblkwrt),0))),'%</td>',
---'</tr>'
---from DBA_data_files f, v$filestat v
---where f.file_id=v.file#
---ORDER BY 1,file#;
-
---prompt </table><br>
 
 -- *************************************** FULL SCANS
 -- if a read request causes a large multiblock read on disk, it can mean that it is doing a full scan read
 -- so : if phyblkrd (blocks) is much greater than phyrds (read requests), this can be due to full scans
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
@@ -1212,7 +1181,6 @@ prompt " width="20" height="20" alt="Tips..." title="La d&eacute;tection des FUL
 
 prompt <td align=center><font color="WHITE"><b>D&eacute;tection des FULL SCANs</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Read requests</b></td><td><b>Blocks read</b></td><td><b>ratio (% de full scans)</b></td></tr>
-set define "&"
 
 select
 '<tr>','<td bgcolor="LIGHTBLUE">',f.tablespace_name,'</td>',
@@ -1230,7 +1198,7 @@ ORDER BY f.tablespace_name,v.file#;
 
 prompt </table><br>
 
---TIPS : Pour trouver les tables souvent lues s&eacute;quentiellement (connexion SYS obligatoire !) :
+--TIPS : Pour trouver les tables souvent lues s&eacute;quentiellement (connexion SYS obligatoire ?) :
 --set head on
 --set pages 0
 --col object_name format a40
@@ -1246,10 +1214,9 @@ prompt </table><br>
 
 -- *************************************** Evenements systemes
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Ev&eacute;nements syst&egrave;me</b></font></td></tr>
 prompt <tr><td><b>Evenement</b></td><td><b>Total waits</b></td><td><b>Timeout</b></td><td><b>Average time</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',event,'</td>','<td bgcolor="LIGHTBLUE" align=right>',total_waits,'</td>','<td bgcolor="',decode(total_timeouts,0,'LIGHTBLUE','ORANGE'),'" align=right>',total_timeouts,'</td>','<td bgcolor="LIGHTBLUE" align=right>',to_char(average_wait,'999999990D00'),'</td>','</tr>' from v$system_event
 where event like 'log%' or event like 'db file%';
 
@@ -1262,7 +1229,6 @@ prompt <hr>
 -- *************************************** Jobs scheduler
 
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
@@ -1274,15 +1240,13 @@ prompt <td align=center><font color="WHITE"><b>Liste des Jobs</b></font></td></t
 prompt <tr><td><b>Owner</b></td><td><b>Job</b></td><td><b>Premier lancement</b></td><td><b>Prochain lancement</b></td><td><b>Statut</b></td></tr>
       select  '<tr>','<td bgcolor="LIGHTBLUE" align=left>',OWNER,'</td>','<td bgcolor="LIGHTBLUE" align=left>',JOB_NAME,'</td>','<td bgcolor="LIGHTBLUE" align=left>',to_char(START_DATE,'DD-MM-YYYY HH:MI'),'</td>','<td bgcolor="LIGHTBLUE" align=left>',to_char(NEXT_RUN_DATE,'DD-MM-YYYY HH:MI'),'</td>','<td bgcolor="',decode(STATE, 'SCHEDULED', 'BLUE', 'SUCCEEDED', 'BLUE', 'ORANGE'),'" align=right><font color="WHITE"><b>',STATE,'</b></font></td>','</tr>'
        FROM DBA_SCHEDULER_JOBS;
-set define "&"
 
 prompt </table><br>
 -- *************************************** Mise à jour automatique des statistiques
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Mise &agrave; jour automatique des statistiques</b></font></td></tr>
 prompt <tr><td><b>JOB</b></td><td><b>Automatiques (O/N)</b></td></tr>
-set define "&"
+
 select  '<tr><td bgcolor="LIGHTBLUE" align=left>',JOB_NAME,'</td><td bgcolor="BLUE" align=right><font color="WHITE"><b>',STATE,'</b></font></td></tr>'
    FROM DBA_SCHEDULER_JOBS 
    WHERE JOB_NAME in ('GATHER_STATS_JOB','MGMT_STATS_CONFIG_JOB');
@@ -1318,7 +1282,6 @@ prompt <hr>
 -- *************************************** Taille SGA
 
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
@@ -1382,36 +1345,34 @@ UNION ALL
 select '<tr>','<td bgcolor="WHITE">TOTAL</td>',
 '<td bgcolor="BLUE" align=right><font color="WHITE"><b>'||to_char(round(sum(s.bytes)/(1024*1024),2),'99G999G990D00')||'</b></font></td>','</tr>' 
 from v$sgastat s;
-set define "&"
 
 prompt </table><br>
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE
-delete from &tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='SGA';
-insert into &tblhist (
+delete from ~tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='SGA';
+insert into ~tblhist (
 select sysdate,'SGA','sga_size (spfile/max_used)',total,valeur,0 from 
 (select round(value/(1024*1024),2) total from v$parameter where name = 'sga_max_size') p,
 (select round(sum(bytes)/(1024*1024),2) valeur from v$sgastat) s
 );
-insert into &tblhist (
+insert into ~tblhist (
 select sysdate, 'SGA', 'shared_pool (spfile/used)', t.Shared_pool_size, u.utilise, 0
 from (select name, round(value/(1024*1024),2) Shared_pool_size
       from v$parameter where name='shared_pool_size') t,
      (select round(sum(bytes)/(1024*1024),2) Utilise
       from v$sgastat where pool='shared pool' and name <> 'free memory') u);
-insert into &tblhist (
+insert into ~tblhist (
 select sysdate,'SGA','buffer_cache',round(value/(1024*1024),2), 0, 0 from v$sga
 where name = 'Database Buffers');
 
 
 -- *************************************** Diff memoire utilisee
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>Diff&eacute;rence de tailles depuis le dernier audit (
 print last_audit
 prompt )</b></font></td></tr>
 prompt <td><b>Espaces m&eacute;moire</b></td><td><b>SPFILE (Mo)</b></td><td><b>Utilis&eacute; (Mo)</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',a.obj_name,'</td>',
 decode(SIGN(a.total-h.total),
       -1,'<td bgcolor="#33FF33" align=right>'||to_char(a.total-h.total,'S99G999G990D00')||'</td>',
@@ -1422,12 +1383,12 @@ decode(SIGN(a.utilis-h.utilis),
        0,'<td bgcolor="LIGHTBLUE" align=right>'||to_char(a.utilis-h.utilis,'99G999G990D00')||'</td>',
        1,'<td bgcolor="ORANGE" align=right>'||to_char(a.utilis-h.utilis,'S99G999G990D00')||'</td>') UTILISE,'</tr>'
 from
-(select * from &tblhist
+(select * from ~tblhist
 	where trunc(to_date(date_aud))=trunc(sysdate)
 and type_obj='SGA') a,
-(select * from &tblhist
+(select * from ~tblhist
 	where to_date(date_aud) like
-	(select max(to_date(date_aud)) from &tblhist
+	(select max(to_date(date_aud)) from ~tblhist
                 where to_date(date_aud) < trunc(sysdate)
                 and type_obj='SGA')
 	and type_obj='SGA') h
@@ -1438,11 +1399,10 @@ prompt </table><br>
 -- *************************************** Pools memoire
 -- memory_target = sga_target + max(pga_aggregate_target, maximum PGA allocated)
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Infos SGA</b></font></td></tr>
 prompt <tr><td><b>Nom</b></td><td><b>Valeur (Mo)</b></td></tr>
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>vue V$SGAINFO (>=10g)</b></font></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',name,'</td>' NOM,'<td bgcolor="LIGHTBLUE" align=right>',to_char(round(bytes/(1024*1024),2),'99G999G990D00'),'</td>' total,'</tr>' from v$sgainfo;
 -- Pour compatibilite avec 9i :
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>vue V$SGA (toutes versions)</b></font></td></tr>
@@ -1459,10 +1419,8 @@ prompt </table><br>
 --        Mettre la ligne SIZE_FACTOR=1 dans une autre couleur ? Bleu légèrement plus sombre ?
 
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>Memory target advice</b></font></td></tr>
 prompt <tr><td><b>Memory size</b></td><td><b>Memory_target size factor</b></td><td><b>Estimated DB workload</b></td></tr>
-set define "&"
 
 DECLARE
  v_res1 varchar2(2000);
@@ -1517,10 +1475,9 @@ prompt <div align=center><b><font color="WHITE" size=2>SHARED POOL</font></b></d
 prompt <hr>
 -- *************************************** Shared pool
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Shared pool area</b></font></td></tr>
 prompt <tr><td><b>Pool</b></td><td><b>Total (Mo)</b></td><td><b>Utilis&eacute; (Mo)</b></td><td><b>Libre (Mo)</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',t.name,'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(t.total,'99G999G990D00'),'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(u.utilise,'99G999G990D00'),'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(l.libre,'99G999G990D00'),'</td>','</tr>'
 from (select name, round(bytes/(1024*1024),2) Total
       from v$sgainfo where lower(name)='shared pool size') t,
@@ -1533,8 +1490,6 @@ prompt </table><br>
 
 -- *************************************** Dictionary cache
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
-
 prompt <tr><td bgcolor="#3399CC" colspan=5>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
@@ -1545,7 +1500,7 @@ prompt " width="20" height="20" alt="Tips..." title="Augmenter SHARED_POOL_SIZE 
 prompt <td align=center><font color="WHITE"><b>Dictionary cache</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
 
 prompt <tr><td width=15%><b>Gets</b></td><td width=15%><b>Get Misses</b></td><td width=15%><b>Scan</b></td><td width=15%><b>Scan Misses</b></td><td align=center><b>Ratio</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',sum(gets),'</td>','<td bgcolor="LIGHTBLUE">',sum(getmisses),'</td>','<td bgcolor="LIGHTBLUE">',sum(scans),'</td>','<td bgcolor="LIGHTBLUE">',sum(scanmisses),'</td>',
 '<td bgcolor="',CouleurLimite(round((sum(gets)-sum(getmisses))/sum(gets),2)*100,85,5,0),'" align=right>',round((sum(gets)-sum(getmisses))/sum(gets),2)*100,' % </td>','</tr>'
 from v$rowcache;
@@ -1554,8 +1509,6 @@ prompt </table><br>
 
 -- *************************************** Library cache
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
-
 prompt <tr><td bgcolor="#3399CC" colspan=4>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
@@ -1564,17 +1517,14 @@ prompt &nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
 prompt " width="20" height="20" alt="Info..." title="Augmenter SHARED_POOL_SIZE si les ratios (Library ET Dictionary cache) est inf&eacute;rieur &agrave; 85%"></td>
 prompt <td align=center><font color="WHITE"><b>Library cache</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
-
 prompt <tr><td><b>Executions</b></td><td><b>Rechargements</b></td><td colspan=2><b>Ratio</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE" align=right>',sum(pins),'</td>' exec,
 '<td bgcolor="LIGHTBLUE" align=right>',sum(reloads),'</td>' recharg,
 '<td bgcolor="',CouleurLimite(round((sum(pins)-sum(reloads))/sum(pins),2)*100,85,5,0),'" align=right colspan=2>',round((sum(pins)-sum(reloads))/sum(pins),2)*100,' %</td>' ratio,'</tr>'
 from v$librarycache;
 
 -- *************************************** Stat library cache
-set define off
-
 prompt <tr><td bgcolor="#3399CC" colspan=4>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
@@ -1585,7 +1535,7 @@ prompt " width="20" height="20" alt="Tips..." title="Rapprocher ces statistiques
 prompt <td align=center><font color="WHITE"><b>Statistiques library cache par types de requ&ecirc;tes</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
 
 prompt <tr><td colspan=2><b>Namespace</b></td><td><b>GetHits</b></td><td><b>PinHits</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE" colspan=2>',namespace,'</td>',
 '<td bgcolor="',CouleurLimite(round(gethitratio,2)*100,70,10,0),'" align=right>',round(gethitratio,2)*100,' %</td>',
 '<td bgcolor="',CouleurLimite(round(pinhitratio,2)*100,70,10,0),'" align=right>',round(pinhitratio,2)*100,' %</td>','</tr>'
@@ -1595,7 +1545,6 @@ prompt </table><br>
 
 -- *************************************** Requetes les plus gourmandes
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=9><font color="WHITE"><b>Requ&ecirc;tes les plus gourmandes en ressources (moyennes par ex&eacute;cution)</b></font></td></tr>
 prompt <tr><td><b>Ex&eacute;cutions</b></td><td><b>Recalculs</b></td><td align=center><b>Ratio</br>r&eacute;-ex&eacute;cutions</b></td><td><b>Moy. tris</b></td><td><b>Moyenne lectures disque</b></td><td><b>Moyenne temps &eacute;coul&eacute; (&micro;sec)</b></td><td><b>Moyenne buffers</b></td><td><b>(Adresse v$sqlarea) Requ&ecirc;te SQL</b></td></tr>
 SELECT '<tr>','<td bgcolor="LIGHTBLUE">',sqla.executions,'</td>',
@@ -1613,7 +1562,6 @@ FROM (select * from v$sqlarea where executions > 50
   ORDER BY round(elapsed_time/NULLIF(executions,0),0) DESC
 ) sqla
 WHERE ROWNUM < 21;
-set define "&"
 
 DECLARE cnt_rq number := 0;
 BEGIN
@@ -1653,10 +1601,9 @@ prompt </table><br>
 
 -- *************************************** Java pool
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Java pool</b></font></td></tr>
 prompt <tr><td width=15%><b>Nom</b></td><td width=15%><b>Total (Mo)</b></td><td width=15%><b>Utilis&eacute; (Mo)</b></td><td width=15%><b>Libre (Mo)</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',substr(t.name,1,30),'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(decode(t.total,NULL,0,t.total),'99G999G990D00'),'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(decode(u.utilise,NULL,0,t.total),'99G999G990D00'),'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(decode(l.libre,NULL,0,t.total),'99G999G990D00'),'</td>','</tr>'
 from (select name, round(value/(1024*1024),2) total
       from v$parameter where name='java_pool_size') t,
@@ -1673,8 +1620,6 @@ prompt <div align=center><b><font color="WHITE" size=2>BUFFER CACHE</font></b></
 prompt <hr>
 -- *************************************** Buffer cache : Blocs lus E/S
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
-
 prompt <tr><td bgcolor="#3399CC" colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
@@ -1682,7 +1627,7 @@ prompt " width="20" height="20" alt="Tips..." title="Si ce ratio est tr&egrave;s
 prompt <td align=center><font color="WHITE"><b>Buffer cache : Blocs lus E/S</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
 
 prompt <tr><td width=60%><b>Nom</b></td><td width=40%><b>Valeur</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">'||name||'</td>','<td bgcolor="LIGHTBLUE" align=right>'||value||'</td>','</tr>'
 from v$sysstat
 where name like 'table scan%'
@@ -1692,17 +1637,13 @@ where t1.name like 'table scan blocks gotten%'
 and t2.name like 'table scans (short tables)%'
 and t3.name like 'table scans (long tables)%';
 -- *************************************** Buffer cache : hit ratio
-
-set define off
-
 prompt <tr><td bgcolor="#3399CC" colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
 prompt " width="20" height="20" alt="Tips..." title="Augmenter DB_BLOCK_BUFFERS (ou DB_BLOCK_SIZE) pour que le ratio soit entre 70% et 80%. Au-dessus de 98% on peut gagner de la m&eacute;moire en r&eacute;duisant les buffers."></td>
 prompt <td align=center><font color="WHITE"><b>Buffer cache : hit ratio</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
-
 prompt <tr><td width=15%><b>Nom</b></td><td width=15%><b>Valeur</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">'||name||'</td>', '<td bgcolor="LIGHTBLUE" align=right>'||value||'</td>','</tr>' from v$sysstat
 where name in ('db block gets from cache','consistent gets from cache','physical reads cache')
 order by 1;
@@ -1739,16 +1680,13 @@ prompt </table><br>
 
 -- *************************************** Stats redo logs (contentions)
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
-
 prompt <tr><td bgcolor="#3399CC" colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
 prompt " width="20" height="20" alt="Tips..." title="Augmenter LOG_BUFFER pour que REDO LOG SPACE REQUESTS soit proche de 0. Si le ratio wastage/size est inf&eacute;rieur &agrave; 80%, il y a trop de perte de place dans les fichiers redo, ce qui indique une activit&eacute; trop forte du LGWR. V&eacute;rifier les checkpoints et/ou les switchs."></td>
 prompt <td align=center><font color="WHITE"><b>Statistiques redo logs (contentions)</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
-
 prompt <tr><td width=15%><b>Nom</b></td><td width=15%><b>Valeur</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">'||name||'</td>','<td bgcolor="'||decode(name,'redo log space requests',CouleurLimite(value,100000,1000,1),'redo log space wait time',CouleurLimite(value,100000,1000,1),'LIGHTBLUE')||'" align=right>'||value||'</td>','</tr>' from v$sysstat
 where name like 'redo%'
 UNION ALL
@@ -1761,16 +1699,13 @@ prompt </table><br>
 
 -- *************************************** Stats latchs (contentions)
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
-
 prompt <tr><td bgcolor="#3399CC" colspan=3>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
 prompt " width="20" height="20" alt="Tips..." title="si un des ratio excede 5%, les performances sont affect&eacute;es, diminuer LOG_SMALL_ENTRY_SIZE." width=15%></td>
 prompt <td align=center><font color="WHITE"><b>Statistiques latchs (contentions)</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
-
 prompt <tr><td width=15%><b>Nom</b></td><td width=15%><b>Ratio misses/gets</b></td><td width=25%><b>Ratio immediate misses/immediate gets</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',name,'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(round(sum(misses)/(sum(gets)+0.00000000001)*100),'990D00'),' %</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(round(sum(immediate_misses)/(sum(immediate_misses+immediate_gets)+0.00000000001)*100),'990D00'),' %</td>','</tr>'
 from   v$latch
 where  name in ('redo allocation',  'redo copy')
@@ -1786,11 +1721,13 @@ prompt <hr>
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Taille zone de tri</b></font></td></tr>
 prompt <tr><td width=15%><b>Pool</b></td><td width=15%><b>Taille (Mo)</b></td></tr>
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',name,'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(round(value/(1024*1024),2),'99G999G990D00'),'</td>','</tr>' from v$parameter
 where name='sort_area_size';
 -- *************************************** Statistiques zone de tri
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Statistiques zone de tri</b></font></td></tr>
 prompt <tr><td width=15%><b>Nom</b></td><td width=15%><b>Valeur</b></td></tr>
+
 select '<tr>','<td bgcolor="LIGHTBLUE">'||name||'</td>', '<td bgcolor="LIGHTBLUE" align=right>'||value||'</td>','</tr>' from v$sysstat
 where name like 'sort%'
 UNION ALL
@@ -1806,17 +1743,15 @@ prompt <div align=center><b><font color="WHITE" size=2>PGA</font></b></div>
 prompt <hr>
 -- *************************************** Statistiques PGA
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>Cumuls PGA</b></font></td></tr>
 prompt <tr><td width=15%><b>Actuel (Mo)</b></td><td width=15%><b>Max allou&eacute; (Mo)</b></td><td width=15%><b>PGA_AGGREGATE_TARGET (Mo)</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE" align=right>',to_char(round(sum(PGA_ALLOC_MEM)/1024/1024,2),'99G999G990D00'),'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(round(sum(PGA_MAX_MEM)/1024/1024,2),'99G999G990D00'),'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(round(to_number(value)/1024/1024,2),'99G999G990D00'),'</td>','</tr>'
 from v$process,v$parameter
 where name='pga_aggregate_target'
 group by value;
 
 -- *************************************** Detail UGA par utilisateur
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>D&eacute;tail UGA par utilisateur</b></font></td></tr>
 prompt <tr><td width=15% colspan=2><b>Sch&eacute;ma</b></td><td width=15%><b>Nombre de sessions par sch&eacute;ma</b></td></tr>
 
@@ -1839,7 +1774,6 @@ and n.name='session pga memory';
 
 select '<tr><td width=15% colspan=2><b>Nombre max. d&#39;utilisateurs simultan&eacute;s (highwater) / Nombre max. autoris&eacute;s</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE"><b>',sessions_highwater,'/',decode(SESSIONS_MAX,0,'-',SESSIONS_MAX),'</b></td>','</tr>'
 from v$license;
-set define "&"
 
 select '<tr><td width=15% colspan=2><b>Total UGA (Mo)</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE">',to_char(round(sum(value)/(1024*1024),2),'99G999G990D00'),'</td>','</tr>'
 from v$statname n, v$sesstat t
@@ -1863,19 +1797,15 @@ prompt <!-- ALERT.LOG -->
 
 define alert_length="2000"
 column nlsdate new_value _nlsdate noprint;
--- column bdump   new_value _bdump noprint;
--- ### here, "dbname" taken in v$database at the beginning doesn't work, we need that of v$instance used in the alert_SID.log name.
 column db      new_value _db    noprint;
 
 select VALUE nlsdate from NLS_DATABASE_PARAMETERS where parameter = 'NLS_DATE_LANGUAGE';
--- select VALUE bdump from v$parameter 
---   where name ='background_dump_dest';
 select instance_name db from v$instance;
 
 -- *************************************** create ou truncate final table "alert_log"
 prompt <!-- Creation des tables -->
 -- force sqlplus to exit on error
-set define "~"
+
 WHENEVER sqlerror EXIT sql.sqlcode
 DECLARE
    table_exist number;
@@ -1890,10 +1820,6 @@ BEGIN
       IF tabtools = 0 THEN
          dbms_output.put_line('<td bgcolor="#33FF33">Ajouter un tablespace <b>~tbstools</b> pour la table ALERT_LOG</br>');
          raise_application_error(-20003,'Tablespace ~tbstools does not exist');
---         EXECUTE IMMEDIATE 'create table alert_log (
---                             alert_date date,
---                            alert_text varchar2(~~alert_length)
---                         )';
       ELSE
          EXECUTE IMMEDIATE 'create table alert_log (
                              alert_date date,
@@ -1906,11 +1832,11 @@ BEGIN
    END IF;
 END;
 /
-set define "&"
+
 -- now avoid sqlplus to exit
 WHENEVER sqlerror CONTINUE;
 
--- *****************************************  external table alert_log_disk (ak alert.log file)
+-- *****************************************  external table alert_log_disk (ak alert<SID>.log file)
 
 var sbdump varchar2(255);
 col sbdump new_value sbdump;
@@ -1930,13 +1856,12 @@ BEGIN
       select VALUE into bdump from v$parameter where name ='background_dump_dest';
    $END
    select count(DIRECTORY_NAME) into dir_exist from dba_directories
-    where DIRECTORY_NAME='BDUMP';
+     where DIRECTORY_NAME='BDUMPPERF';
 --    and owner in ('SYSTEM','SYS');
    IF dir_exist = 0 THEN
---      v_sql := 'drop directory BDUMP';
---      EXECUTE IMMEDIATE v_sql;
---   END IF;
-     v_sql := 'create directory BDUMP as ''' || bdump || '''';
+-- recreate a directory to bdump even if a system 'BDUMP' directory already exists, because if the script is
+-- executed by a non-SYSTEM user, it as no privilege for using BDUMP.
+     v_sql := 'create directory BDUMPPERF as ''' || bdump || '''';
      EXECUTE IMMEDIATE v_sql;
    END IF;
 -- sbdump string used in prompts below
@@ -1945,10 +1870,11 @@ BEGIN
    ELSE
       :sbdump := bdump || '/'; -- unix path
    END IF;
-   UTL_FILE.FGETATTR('BDUMP', 'alert_&_db..log', file_exists, file_length, file_block_size);
+   UTL_FILE.FGETATTR('BDUMP', 'alert_~_db..log', file_exists, file_length, file_block_size);
    :sbsize := file_length;
 --   dbms_output.put_line (bdump);
---   dbms_output.put_line (file_length);
+--   dbms_output.put_line ('alert_~_db..log');
+--   dbms_output.put_line ('FILE'||file_length);
 END;
 /
 
@@ -1958,6 +1884,7 @@ print :sbdump
 print :sbsize
 prompt -->
 
+prompt <!-- Creation alert_log_disk -->
 DECLARE
    table_exist number;
    v_sql varchar2(2000);
@@ -1969,15 +1896,16 @@ BEGIN
       v_sql := 'drop table alert_log_disk';
       EXECUTE IMMEDIATE v_sql;
    END IF;
-   EXECUTE IMMEDIATE 'create table alert_log_disk (text varchar2(&&alert_length))
+
+   EXECUTE IMMEDIATE 'create table alert_log_disk (text varchar2(~~alert_length))
                          organization external (
                             type oracle_loader
-                            default directory BDUMP
+                            default directory BDUMPPERF
                             access parameters (
                                records delimited by newline nologfile nobadfile
                                fields terminated by "&" ltrim
                                )
-                            location(''alert_&_db..log'')
+                            location(''alert_~_db..log'')
                             )
                          reject limit unlimited';
 END;
@@ -1986,7 +1914,7 @@ END;
 -- ************************************ update table alert_log from alert_log_disk
 -- To be processed :
 --  declare * ERREUR à la ligne 1 : ORA-01653: unable to extend table SYSTEM.ALERT_LOG by 128 in tablespace TOOLS ORA-06512: at line 83
-
+prompt <!-- Remplissage alert_log -->
 declare
   isdate         number := 0;
   start_updating number := 0;
@@ -2002,7 +1930,7 @@ declare
 
 begin
 -- find a starting date : last audit
-  select max(to_date(date_aud)) into max_date from &tblhist
+  select max(to_date(date_aud)) into max_date from ~tblhist
                 where to_date(date_aud) < trunc(sysdate);
   select count(*) into rows_total from alert_log_disk;
 
@@ -2024,7 +1952,7 @@ begin
        and text not like '%Log actively being archived by another process%'
        and text not like '%Committing creation of archivelog%'
        and text not like '%Private_strands%'
-       and trim(text) not like '(&_db)'
+       and trim(text) not like '(~_db)'
        and text not like '%Created Undo Segment%'
        and text not like '%started with pid%'
        and text not like '%ORA-12012%'
@@ -2081,10 +2009,10 @@ begin
         rows_identical := rows_identical + 1;
       ELSE
         IF rows_identical > 1 THEN -- count how many identical messages a day
-          INSERT INTO alert_log VALUES (last_alert_date, substr(last_alert_text, 1, &&alert_length) || '<b> (message repeated ' || rows_identical || ' times this day</b>)');
+          INSERT INTO alert_log VALUES (last_alert_date, substr(last_alert_text, 1, ~~alert_length) || '<b> (message repeated ' || rows_identical || ' times this day</b>)');
           rows_identical := 1;
         ELSE
-          INSERT INTO alert_log VALUES (last_alert_date, substr(last_alert_text, 1, &&alert_length));
+          INSERT INTO alert_log VALUES (last_alert_date, substr(last_alert_text, 1, ~~alert_length));
         END IF;
       END IF;
 --      rows_inserted := rows_inserted + 1;
@@ -2153,14 +2081,13 @@ check date : si date différente de date - 1 (changement de jour), chercher date
 -- ************************************ Affichage des logs
 prompt <!-- Affichage des logs -->
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
 prompt " width="20" height="20" alt="Info..." title="Messages d'erreurs depuis le dernier audit. Si des messages sont affich&eacute;s, voir le d&eacute;tail dans le fichier alert<SID>.log, ou la table ALERT_LOG (r&eacute;sum&eacute;), ou la table externe ALERT_LOG_DISK (qui contient tout l'alert.log). En gras sont indiqu&eacute les lignes regroupant plusieurs messages cons&eacute;cutifs un m&ecirc;me jour."></td>
-set define "&"
-prompt <td align=center><font color="WHITE"><b>&sbdump</b><b>alert_&_db..log (
-select to_char(round(&sbsize/1024/1024,2),'99G999G990D00') from dual;
+prompt <td align=center><font color="WHITE"><b>~sbdump</b><b>alert_~_db..log (
+
+select to_char(round(~sbsize/1024/1024,2),'99G999G990D00') from dual;
 prompt Mb)</b></font></td></tr></table></td></tr>
 prompt <tr><td width=20%><b>Date</b></td><td width=80%><b>Texte</b></td></tr>
 
@@ -2170,7 +2097,7 @@ prompt <tr><td width=20%><b>Date</b></td><td width=80%><b>Texte</b></td></tr>
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN a.alert_text LIKE '%<b> (message repeated %' THEN '<b>'||to_char(a.alert_date,'DD/MM/RR HH24:MI')||'</b>' ELSE to_char(a.alert_date,'DD/MM/RR HH24:MI') END,'</td>', '<td bgcolor="LIGHTBLUE">',a.alert_text,'</td>','</tr>'
   from alert_log a
---       (select max(to_date(date_aud)) date_aud from &tblhist
+--       (select max(to_date(date_aud)) date_aud from ~tblhist
 --                where to_date(date_aud) < trunc(sysdate)) d
  where (alert_text like '%ORA-%'
   or alert_text like '%TNS-%'
@@ -2184,7 +2111,7 @@ DECLARE cnt_obj number := 0;
 BEGIN
    select count(a.alert_date) into cnt_obj
    from alert_log a
---        (select max(to_date(date_aud)) date_aud from &tblhist
+--        (select max(to_date(date_aud)) date_aud from ~tblhist
 --               where to_date(date_aud) < trunc(sysdate)) d
    where (alert_text like '%ORA-%'
      or alert_text like '%TNS-%'
@@ -2219,11 +2146,10 @@ prompt <hr>
 
 -- *************************************** Objets invalides
 prompt <!-- Objets invalides -->
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Objets invalides</b></font></td></tr>
 prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=15%><b>Objet</b></td><td width=15%><b>Type</b></td><td width=15%><b>Statut</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',OWNER,'</td>','<td bgcolor="LIGHTBLUE">',object_name,'</td>','<td bgcolor="LIGHTBLUE">',object_type,'</td>','<td bgcolor="LIGHTBLUE">',status,'</td>','</tr>' from dba_objects where status <> 'VALID' and object_name not like 'BIN$%';
 
 DECLARE cnt_obj number := 0;
@@ -2241,7 +2167,6 @@ prompt </table><br>
 
 -- *************************************** Objets en erreur
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Erreurs sur les objets utilisateurs (dba_errors)</b></font></td></tr>
 prompt <tr><td><b>Objet, num&eacute;ro et texte de la ligne</b></td><td><b>Erreur</b></td></tr>
 
@@ -2292,16 +2217,14 @@ SELECT count(n) into cnt_err
 end;
 /
 
-set define "&"
 prompt </table><br>
 
 -- *************************************** Indexes UNUSABLE
 prompt <!-- Indexes unusable -->
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>Indexes UNUSABLE</b></font></td></tr>
 prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=15%><b>Index</b></td><td width=15%><b>Statut</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',OWNER,'</td>','<td bgcolor="LIGHTBLUE">',index_name,'</td>','<td bgcolor="LIGHTBLUE">',status,'</td>','</tr>' from dba_indexes where status not in ('VALID','N/A');
 
 DECLARE cnt_obj number := 0;
@@ -2319,8 +2242,6 @@ prompt </table><br>
 
 -- *************************************** Liste des segments de plus de 100M
 prompt <!-- Segments de plus de 100M -->
-
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=4>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
@@ -2328,12 +2249,12 @@ print info
 prompt " width="20" height="20" alt="Info..." title="L'espace utilis&eacute; correspond aux blocs allou&eacute;s au segment, qu'ils soient vides (pr&eacute;allocation de blocs ou suppressions de donn&eacute;es) ou remplis."></td>
 prompt <td align=center><font color="WHITE"><b>Liste des segments de plus de 100Mo</b></font></td></tr></table></td></tr>
 prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=15%><b>Segment</b></td><td width=15%><b>Type</b></td><td width=15%><b>Taille</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',owner,'</td>', '<td bgcolor="LIGHTBLUE">',segment_name,'</td>', '<td bgcolor="LIGHTBLUE">',segment_type,'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(round(bytes/(1024*1024),0),'99G999G990'),' Mo</td>','</tr>'
 from dba_segments
 where (segment_type like 'TABLE%' OR segment_type like 'INDEX%' OR segment_type like 'LOB%')
 and bytes/1024/1024 >100 
-and owner not in &sysusers and owner not in &exusers
+and owner not in ~sysusers and owner not in ~exusers
 order by bytes desc;
 
 DECLARE cnt_obj number := 0;
@@ -2341,7 +2262,7 @@ BEGIN
    select count(segment_name) into cnt_obj from dba_segments
    where (segment_type like 'TABLE%' OR segment_type like 'INDEX%' OR segment_type like 'LOB%')
    and bytes/1024/1024 >100 
-   and owner not in &sysusers and owner not in &exusers
+   and owner not in ~sysusers and owner not in ~exusers
    and rownum = 1;
 
    if cnt_obj=0 then
@@ -2354,12 +2275,10 @@ prompt </table><br>
 
 -- utilisateurs et tablespaces par defaut
 -- **************************************
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>utilisateurs et tablespaces par d&eacute;faut</b></font></td></tr>
 prompt <tr><td><b>Utilisateurs</b></td><td><b>Tablespace par d&eacute;faut</b></td><td><b>Tablespace temporaire</b></td></tr>
 prompt 
-set define "&"
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',username,'</td>','<td bgcolor="LIGHTBLUE">',default_tablespace,'</td>', '<td bgcolor="LIGHTBLUE">',temporary_tablespace,'</td>','</tr>'
 from dba_users
@@ -2370,7 +2289,6 @@ prompt </table><br>
 
 -- Liste des utilisateurs systemes non listes dans les variables sysusers et exusers
 -- ********************************
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
@@ -2378,13 +2296,12 @@ prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:i
 print info
 prompt " width="20" height="20" alt="Info..." title="Les variables sysusers et exusers listent les utilisateurs syst&egrave;mes Oracle, afin de les &eacute;liminer des requ&ecirc;tes qui ne doivent prendre en compte que les sch&eacute;mas applicatifs. Ici sont list&eacute;s pour information les utilisateurs qui ne sont pas inclus dans ces variables, afin de rep&eacute;rer ceux qui devraient y &ecirc;tre ajout&eacute;s."></td>
 prompt <td align=center><font color="WHITE"><b>Information : Liste des utilisateurs non syst&egrave;mes</b></font></td></tr></table></td></tr>
-set define "&"
 prompt <tr><td><b>Utilisateur</b></td></tr>
 prompt 
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',username,'</td>','</tr>'
 from dba_users
-where username not in &sysusers and username not in &exusers;
+where username not in ~sysusers and username not in ~exusers;
 
 prompt </table><br>
 
@@ -2392,18 +2309,17 @@ prompt </table><br>
 prompt <!-- Segments utilisateurs dans le tablespace SYSTEM -->
 -- Tables
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>Utilisateurs ayant des objets dans le tablespace SYSTEM</b></font></td></tr>
 prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=15%><b>Type</b></td><td width=15%><b>Segment</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',owner,'</td>', '<td bgcolor="LIGHTBLUE">Tables</td>','<td bgcolor="LIGHTBLUE">',count(*),'</td>','</tr>' TOTAL from dba_tables
 	where tablespace_name = 'SYSTEM'
-	and owner not in &sysusers and owner not in &exusers
+	and owner not in ~sysusers and owner not in ~exusers
 	group by owner;
 -- Indexes
 select '<tr>','<td bgcolor="LIGHTBLUE">',owner,'</td>', '<td bgcolor="LIGHTBLUE">Indexes</td>','<td bgcolor="LIGHTBLUE">',count(*),'</td>','</tr>' TOTAL from dba_indexes
 	where tablespace_name = 'SYSTEM'
-	and owner not in &sysusers and owner not in &exusers
+	and owner not in ~sysusers and owner not in ~exusers
 	group by owner;
 
 DECLARE
@@ -2412,11 +2328,11 @@ DECLARE
 BEGIN
    select count(*) into cnt_obj_t from dba_tables
 	where tablespace_name = 'SYSTEM'
-	and owner not in &sysusers and owner not in &exusers
+	and owner not in ~sysusers and owner not in ~exusers
         and rownum = 1;
    select count(*) into cnt_obj_i from dba_indexes
 	where tablespace_name = 'SYSTEM'
-	and owner not in &sysusers and owner not in &exusers
+	and owner not in ~sysusers and owner not in ~exusers
         and rownum = 1;
    if cnt_obj_t=0 and cnt_obj_i=0 then
       dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td></tr>');
@@ -2429,16 +2345,15 @@ prompt </table><br>
 -- *************************************** Tables et index dans le meme tablespace
 prompt <!-- Tables et index dans le meme tablespace -->
 prompt <table border=1 width=100% bgcolor="WHITE">
-set define off
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>Indexes dans le m&ecirc;me tablespace que leur table</b></font></td></tr>
 prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=15%><b>Tablespace</b></td><td width=15%><b>Nombre d&#39;objets</b></td></tr>
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',a.owner,'</td>', '<td bgcolor="LIGHTBLUE">',a.tablespace_name,'</td>', '<td bgcolor="LIGHTBLUE">',count(a.table_name),'</td>','</tr>'
 from dba_tables a, dba_indexes b
 where a.tablespace_name=b.tablespace_name
 and a.table_name=b.table_name
 and a.owner=b.owner
-and a.owner not in &sysusers and a.owner not in &exusers
+and a.owner not in ~sysusers and a.owner not in ~exusers
 group by a.owner,a.tablespace_name
 order by a.owner,a.tablespace_name;
 
@@ -2448,7 +2363,7 @@ BEGIN
       where a.tablespace_name=b.tablespace_name
       and a.table_name=b.table_name
       and a.owner=b.owner
-      and a.owner not in &sysusers and a.owner not in &exusers
+      and a.owner not in ~sysusers and a.owner not in ~exusers
       and rownum = 1;
    if cnt_obj=0  then
       dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td></tr>');
@@ -2460,15 +2375,14 @@ prompt </table><br>
 
 -- Roles par utilisateurs non systemes
 -- ***********************************
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>R&ocirc;les par utilisateur (non syst&egrave;mes)</b></font></td></tr>
 prompt <tr><td><b>Utilisateurs</b></td><td><b>R&ocirc;les</b></td></tr>
 prompt 
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',username,'</td>', decode(granted_role,NULL,'<td bgcolor="LIGHTGREY"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td>','<td bgcolor="LIGHTBLUE">'||granted_role||'</td>') grole,'</tr>'
 from dba_users, dba_role_privs
-where username not in &sysusers and username not in &exusers
+where username not in ~sysusers and username not in ~exusers
 and username=grantee(+)
 order by username,grole;
 
@@ -2476,21 +2390,20 @@ prompt </table><br>
 
 -- Liste des schemas vides (aucun objets)
 -- *************************************
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center><font color="WHITE"><b>Liste des sch&eacute;mas vides (aucun objet)</b></font></td></tr>
 prompt <tr><td><b>Sch&eacute;mas vides</b></td></tr>
 prompt 
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',username,'</td>','</tr>' from dba_users
 where username not in (select owner from dba_segments)
-and username not in &sysusers and username not in &exusers;
+and username not in ~sysusers and username not in ~exusers;
 
 DECLARE cnt_sch number;
 BEGIN
    select count(username) into cnt_sch from dba_users
    where username not in (select owner from dba_segments)
-and username not in &sysusers and username not in &exusers;
+and username not in ~sysusers and username not in ~exusers;
    if cnt_sch=0 then
       dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td></tr>');
    end if;
@@ -2501,12 +2414,11 @@ prompt </table><br>
 
 -- Nombres d'objets par schemas (hors schemas systemes)
 -- ***************************************************
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Nombre d&#39;objets par sch&eacute;ma (non syst&egrave;mes)</b></font></td></tr>
 prompt <tr><td><b>Utilisateur</b></td><td><b>Total</b></td><td><b>Tables</b></td><td><b>Indexes</b></td><td><b>Autres</b></td></tr>
 prompt 
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',t.owner,'</td>',
 '<td bgcolor="LIGHTBLUE" align=right>',to_char(decode(t.total,NULL,0,t.total),'99G999G990'),'</td>',
 '<td bgcolor="LIGHTBLUE" align=right>',to_char(decode(a.tables,NULL,0,a.tables),'99G999G990'),'</td>',
@@ -2514,21 +2426,21 @@ select '<tr>','<td bgcolor="LIGHTBLUE">',t.owner,'</td>',
 '<td bgcolor="LIGHTBLUE" align=right>',to_char(decode(o.autres,NULL,0,o.autres),'99G999G990'),'</td>','</tr>'
 from  (select owner, count(*) total
       from dba_segments
-      where owner not in &sysusers and owner not in &exusers
+      where owner not in ~sysusers and owner not in ~exusers
       group by owner) t,
      (select owner, count(*) tables
       from dba_segments
-      where owner not in &sysusers and owner not in &exusers
+      where owner not in ~sysusers and owner not in ~exusers
       and segment_type='TABLE'
       group by owner) a,
      (select owner, count(*) indexes
       from dba_segments
-      where owner not in &sysusers and owner not in &exusers
+      where owner not in ~sysusers and owner not in ~exusers
       and segment_type='INDEX'
       group by owner) i,
      (select owner, count(*) autres
       from dba_segments
-      where owner not in &sysusers and owner not in &exusers
+      where owner not in ~sysusers and owner not in ~exusers
       and segment_type not in ('TABLE','INDEX')
       group by owner) o
 where t.owner=a.owner(+) and t.owner=i.owner(+) and t.owner=o.owner(+);
@@ -2537,12 +2449,11 @@ prompt </table><br>
 
 -- Taille utilisee par les schemas (hors schemas systemes)
 -- *******************************************************
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Taille utilis&eacute;e par les sch&eacute;mas (non syst&egrave;mes)</b></font></td></tr>
 prompt <tr><td><b>Utilisateur</b></td><td><b>Total (Mo)</b></td><td><b>Tables (Mo)</b></td><td><b>Indexes (Mo)</b></td><td><b>Autres (Mo)</b></td></tr>
 prompt 
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',t.owner,'</td>',
 '<td bgcolor="LIGHTBLUE" align=right>',to_char(decode(t.total,NULL,0,t.total),'99G999G990D00'),'</td>',
 '<td bgcolor="LIGHTBLUE" align=right>',to_char(decode(a.tables,NULL,0,a.tables),'99G999G990D00'),'</td>',
@@ -2550,21 +2461,21 @@ select '<tr>','<td bgcolor="LIGHTBLUE">',t.owner,'</td>',
 '<td bgcolor="LIGHTBLUE" align=right>',to_char(decode(o.autres,NULL,0,o.autres),'99G999G990D00'),'</td>','</tr>'
 from  (select owner, round(sum(bytes)/(1024*1024),2) total
       from dba_segments
-      where owner not in &sysusers and owner not in &exusers
+      where owner not in ~sysusers and owner not in ~exusers
       group by owner) t,
      (select owner, round(sum(bytes)/(1024*1024),2) tables
       from dba_segments
-      where owner not in &sysusers and owner not in &exusers
+      where owner not in ~sysusers and owner not in ~exusers
       and segment_type='TABLE'
       group by owner) a,
      (select owner, round(sum(bytes)/(1024*1024),2) indexes
       from dba_segments
-      where owner not in &sysusers and owner not in &exusers
+      where owner not in ~sysusers and owner not in ~exusers
       and segment_type='INDEX'
       group by owner) i,
      (select owner, round(sum(bytes)/(1024*1024),2) autres
       from dba_segments
-      where owner not in &sysusers and owner not in &exusers
+      where owner not in ~sysusers and owner not in ~exusers
       and segment_type not in ('TABLE','INDEX')
       group by owner) o
 where t.owner=a.owner(+) and t.owner=i.owner(+) and t.owner=o.owner(+);
@@ -2573,12 +2484,11 @@ prompt </table><br>
 
 -- Liste des liens de bases de donn&eacute;es
 -- ***********************************
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Liste des liens de bases de donn&eacute;es</b></font></td></tr>
 prompt <tr><td><b>Utilisateur</b></td><td><b>DB Link</b></td><td><b>Utilisateur distant</b></td><td><b>Serveur</b></td></tr>
 prompt 
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',owner,'</td>','<td bgcolor="LIGHTBLUE">',DB_LINK,'</td>','<td bgcolor="LIGHTBLUE">',USERNAME,'</td>',
        '<td bgcolor="LIGHTBLUE">',HOST,'</td>','</tr>'
 from dba_db_links
@@ -2597,21 +2507,20 @@ prompt </table><br>
 
 -- Liste des synonymes non systemes
 -- ********************************
-set define off
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Liste des synonymes (non syst&egrave;mes)</b></font></td></tr>
 prompt <tr><td><b>Utilisateur</b></td><td><b>Synonyme</b></td><td><b>Propri&eacute;taire</b></td><td><b>Objet cible</b></td></tr>
 prompt 
-set define "&"
+
 select '<tr>','<td bgcolor="LIGHTBLUE">',owner,'</td>', '<td bgcolor="LIGHTBLUE">',synonym_name,'</td>', '<td bgcolor="LIGHTBLUE">',table_owner,'</td>',
        '<td bgcolor="LIGHTBLUE">',table_name,'</td>','</tr>'
 from dba_synonyms
-where table_owner not in &sysusers and table_owner not in &exusers and ROWNUM <= 5000;
+where table_owner not in ~sysusers and table_owner not in ~exusers and ROWNUM <= 5000;
 
 DECLARE cnt_syn number;
 BEGIN
    select count(owner) into cnt_syn from dba_synonyms
-where table_owner not in &sysusers and table_owner not in &exusers;
+where table_owner not in ~sysusers and table_owner not in ~exusers;
    if cnt_syn=0 then
       dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td></tr>');
    end if;
@@ -2619,7 +2528,6 @@ end;
 /
 
 prompt </table><br>
-
 prompt </body>
 prompt </html>
 

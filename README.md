@@ -22,7 +22,8 @@ For a wider understanding, I'll translate parts from french to english, step by 
     ALTER USER MyAuditUser QUOTA UNLIMITED ON TOOLS;
     GRANT CONNECT, SELECT ANY DICTIONARY, CREATE ANY DIRECTORY TO MyAuditUser;
 ```
-* IMPORTANT : it's better (in fact, actually mandatory) if a tablespace "TOOLS" exists in the database for a table of audit history. If not, the table can be created in tablespace SYSTEM (but the user must have write right).
+* IMPORTANT : it's better (in fact, actually mandatory) if an extra tablespace (called "TOOLS" by default) exists in the database for a table of audit history. If not, the table can be created in tablespace SYSTEM (but the user must have write right).
+If you want to change this tablespace name, you must change the "tbstools" constante at the beginning of the script.
 
 * TNS :
 ```
@@ -104,3 +105,7 @@ For a wider understanding, I'll translate parts from french to english, step by 
 * 2019-2020 some display and format improvements here and there.
 * 10/2020 v3.4 script modification to be launched by a normal user instead of SYSTEM
 * 11/2020 tablespace name and table name in variables for audit historic
+* 12/2020 add min/max/avg cpu usage
+  replace "&" as define character by "~", as & is used for HTML formatting
+  code cleaning
+
