@@ -22,8 +22,8 @@ define script_version = 3.4
 -- *************************************** Initialize SQLPlus variables
 set pages 999
 set lines 200
---set echo off
---set termout off
+set echo off
+set termout off
 set trims on
 set showmode off
 set verify off
@@ -39,8 +39,15 @@ ALTER SESSION SET NLS_DATE_FORMAT = 'DD/MM/YYYY';
 ALTER SESSION SET NLS_DATE_LANGUAGE = 'FRENCH';
 
 -- ************************************** CONSTANTS
-define tbstools = TOOLS
-define tblhist = HISTAUDIT
+-- param 1 = tablespace for audit table, param 2 = audit table name
+-- Force a default value if no cmd line parameter
+column 1 new_value 1 noprint
+select '' "1" from dual where rownum = 0;
+define tbstools = ~1 TOOLS
+-- Force default value if no cmd line parameter
+column 2 new_value 2 noprint
+select '' "2" from dual where rownum = 0;
+define tblhist = ~2 HISTAUDIT
 define logfile = ORACLE
 define envfile = env
 
@@ -173,32 +180,37 @@ BEGIN
    select count(tablespace_name) into tabtools from dba_tablespaces
     where tablespace_name = '~tbstools';
 
+   IF tabtools = 0 THEN
+      dbms_output.put_line('<td bgcolor="#FF0000">Ajouter un tablespace <b>~tbstools</b> et y cr&eacute;er la table <b>~tblhist</b></br>');
+      raise_application_error(-20001,'Tablespace ~tbstools does not exist. Please create it before continuing');
+      dbms_output.put_line('</td></tr></table>');
+   END IF;
    IF tabhist = 0 THEN
-      IF tabtools = 0 THEN
-         dbms_output.put_line('<td bgcolor="#FF0000">Ajouter un tablespace <b>~tbstools</b> et y cr&eacute;er la table <b>~tblhist</b></br>');
-         raise_application_error(-20001,'Tablespace ~tbstools does not exist. Please create it before continuing');
-         dbms_output.put_line('</td></tr></table>');
-      ELSE
-         dbms_output.put_line('<td bgcolor="#33FF33">Creation table ~tblhist tablespace ~tbstools...<br>');
-         EXECUTE IMMEDIATE 'create table ~tblhist
-                           (date_aud  date,
-                            type_obj varchar2(5),
-                            obj_name varchar2(255),
-                            total number,
-                            utilis number,
-                            VALEUR varchar2(255))
-                          TABLESPACE ~tbstools';
-         EXECUTE IMMEDIATE 'create or replace public synonym ~tblhist for ~tblhist';
-      END IF;
+      dbms_output.put_line('<td bgcolor="#33FF33">Creation table ~tblhist tablespace ~tbstools...<br>');
+      EXECUTE IMMEDIATE 'create table ~tblhist
+                        (date_aud  date,
+                         type_obj varchar2(5),
+                         obj_name varchar2(255),
+                         total number,
+                         utilis number,
+                         VALEUR varchar2(255))
+                       TABLESPACE ~tbstools';
+      EXECUTE IMMEDIATE 'create or replace public synonym ~tblhist for ~tblhist';
    ELSE
       select tablespace_name into tabtab from dba_tables where table_name='~tblhist';
+      IF tabtab <> '~tbstools' THEN
+         dbms_output.put_line('<td bgcolor="#FF0000">(table ~tblhist existante, tablespace '||tabtab||')<br/>');
+         dbms_output.put_line('D&eacute;placer la table ~tblhist dans le tablespace <b>~tbstools</b> pr&eacute;conis&eacute;</b>.<br/><br/>');
+         raise_application_error(-20002,'Table ~tblhist needs to be moved');
+      END IF;
+
       select count(column_name) into colmodif from dba_tab_columns
        where table_name='~tblhist' AND column_name='MODIFIED';
       select count(column_name) into colval from dba_tab_columns
        where table_name='~tblhist' AND column_name='VALEUR';
       select char_length into collength from dba_tab_columns
        where table_name='~tblhist' and column_name='OBJ_NAME';
-      IF colval>0 AND collength=255 and tabtab = '~tbstools' THEN
+      IF colval>0 AND collength>=255 THEN
          dbms_output.put_line('<td bgcolor="#33FF33">Table ~tblhist existante ');
       ELSE
 		  IF colval=0 THEN
@@ -212,19 +224,6 @@ BEGIN
 		     EXECUTE IMMEDIATE 'alter table ~tblhist modify OBJ_NAME varchar2(255)';
 		     dbms_output.put_line('<td bgcolor="#FF9900">Modification table ~tblhist (col OBJ_NAME)');
 		  END IF;
-		  IF collength > 255 THEN
-		     dbms_output.put_line('<td bgcolor="#33FF33">Table ~tblhist existante ');
-		  END IF;
-      END IF;
-      IF tabtab <> '~tbstools' THEN
-         dbms_output.put_line('<td bgcolor="#FF0000">(table ~tblhist existante, tablespace '||tabtab||')<br/>');
-         dbms_output.put_line('D&eacute;placer la table ~tblhist dans le tablespace <b>~tbstools</b> pr&eacute;conis&eacute;</b>.<br/><br/>');
-         raise_application_error(-20002,'Table ~tblhist needs to be moved');
-         IF tabtools = 0 THEN
-            raise_application_error(-20001,'Tablespace ~tbstools does not exist. Please create it before continuing');
-         END IF;
-      ELSE
-         dbms_output.put_line('(tablespace '||tabtab||')<br>');
       END IF;
    END IF;
 END;
@@ -250,7 +249,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>H&ocirc;te (informations OS)</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE"><b>Host</b></td><td bgcolor="WHITE"><b>OS</b></td><td bgcolor="WHITE"><b>CPUs</b></td><td bgcolor="WHITE"><b>Cores/CPU</b></td><td bgcolor="WHITE"><b>RAM</b></td>
 prompt <tr><td bgcolor="LIGHTBLUE" width=20%>~hstname</td>
-select '<td bgcolor="LIGHTBLUE" width=20%>',PLATFORM_NAME,'</td><td bgcolor="LIGHTBLUE" width=20%>',cpu.VALUE,'</td><td bgcolor="LIGHTBLUE" width=20%>',decode(core.VALUE,NULL,'-',core.VALUE), '</td><td bgcolor="LIGHTBLUE" width=20% align=right>', to_char(round(ram.VALUE/(1024*1024),2),'99G999G990D00'), ' Mo'
+select '<td bgcolor="LIGHTBLUE" width=20%>',PLATFORM_NAME,'</td><td bgcolor="LIGHTBLUE" width=20%>',cpu.VALUE,'</td><td bgcolor="LIGHTBLUE" width=20%>',decode(core.VALUE,NULL,'-',core.VALUE), '</td><td bgcolor="LIGHTBLUE" width=20% align=right>', to_char(round(ram.VALUE/(1024*1024),2),'99G999G990D00'), ' Mo', '</td></tr>'
 from v$database, v$osstat cpu
 left outer join v$osstat core
 on core.STAT_NAME = 'NUM_CPU_CORES'
@@ -272,11 +271,13 @@ BEGIN
    end if;
 end;
 /
-prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>H&ocirc;te (statistiques Oracle)</b></font></td></tr>
-prompt <tr><td bgcolor="WHITE"><b>Sockets (courants)</b></td><td bgcolor="WHITE"><b>CPUs logiques (courants) / Coeurs (courants)</b></td><td bgcolor="WHITE"><b>Sockets (highwater)</b></td><td bgcolor="WHITE"><b>CPUs logiques (highwater) / Cores (highwater)</b></td><td bgcolor="LIGHTGREY"></td></tr>
-select '<td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_CURRENT,NULL,'-',CPU_SOCKET_COUNT_CURRENT), '</td><td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_CURRENT,' / ', decode(CPU_CORE_COUNT_CURRENT,NULL,'-',CPU_CORE_COUNT_CURRENT), '</td><td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_HIGHWATER,NULL,'-',CPU_SOCKET_COUNT_HIGHWATER), '</td><td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_HIGHWATER, ' / ', decode(CPU_CORE_COUNT_HIGHWATER,NULL,'-',CPU_CORE_COUNT_HIGHWATER), '</td><td bgcolor="LIGHTGREY"> </td></tr>' from v$license;
+prompt </table>
 
-prompt </td></tr>
+prompt <table border=1 width=100% bgcolor="WHITE">
+prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>H&ocirc;te (statistiques Oracle)</b></font></td></tr>
+prompt <tr><td bgcolor="WHITE"><b>Sockets (courants)</b></td><td bgcolor="WHITE"><b>CPUs logiques (courants) / Coeurs (courants)</b></td><td bgcolor="WHITE"><b>Sockets (highwater)</b></td><td bgcolor="WHITE"><b>CPUs logiques (highwater) / Cores (highwater)</b></td></tr>
+select '<td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_CURRENT,NULL,'-',CPU_SOCKET_COUNT_CURRENT), '</td><td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_CURRENT,' / ', decode(CPU_CORE_COUNT_CURRENT,NULL,'-',CPU_CORE_COUNT_CURRENT), '</td><td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_HIGHWATER,NULL,'-',CPU_SOCKET_COUNT_HIGHWATER), '</td><td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_HIGHWATER, ' / ', decode(CPU_CORE_COUNT_HIGHWATER,NULL,'-',CPU_CORE_COUNT_HIGHWATER), '</td></tr>' from v$license;
+
 prompt </table>
 prompt <br>
 

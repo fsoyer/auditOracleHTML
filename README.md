@@ -22,16 +22,18 @@ For a wider understanding, I'll translate parts from french to english, step by 
     ALTER USER MyAuditUser QUOTA UNLIMITED ON TOOLS;
     GRANT CONNECT, SELECT ANY DICTIONARY, CREATE ANY DIRECTORY TO MyAuditUser;
 ```
+* The script produces an HTML file called "ORACLE_<SID>_<hostname>_<date>.html
+
 * IMPORTANT : it's better (in fact, actually mandatory) if an extra tablespace (called "TOOLS" by default) exists in the database for a table of audit history. If not, the table can be created in tablespace SYSTEM (but the user must have write right).
 If you want to change this tablespace name, you must change the "tbstools" constante at the beginning of the script.
 
 * TNS :
 ```
- sqlplus -S system/manager@ORCL @/repertoire/audit_oracle_html > audit.html
+ sqlplus -S system/manager@ORCL @/script_directory/audit_oracle_html.sql
 ```
 * Easyconnect :
 ```
- sqlplus -S system/manager@//server_oracle:1521/ORCL @/repertoire/audit_oracle_html > audit.html
+ sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_oracle_html.sql
 ```
 "-S" = silently
 
@@ -40,8 +42,7 @@ If you want to change this tablespace name, you must change the "tbstools" const
  SQLP=/usr/lib/oracle/xe/app/oracle/product/10.2.0/client/scripts/sqlplus.sh
  AUDIT_SCRIPT=/scripts/Audit_Oracle/audit_complet_html
  CONNEXION='//server_oracle:1521/ORCL'
- RAPPORT=audit.html
- $SQLP system/manager@$CONNEXION @$AUDIT_SCRIPT > $RAPPORT
+ $SQLP system/manager@$CONNEXION @$AUDIT_SCRIPT
 ```
 
 * Sample script sqlplus.sh adapted for linux (UTF8 et line breaks), needs the rlwrap tool
@@ -52,6 +53,19 @@ If you want to change this tablespace name, you must change the "tbstools" const
      export EDITOR=vi
      NLS_LANG=FRENCH_FRANCE.UTF8 rlwrap -m $ORACLE_HOME/bin/sqlplus $1 $2 $3 $4 $5
 ```
+
+* Modifying history table name and its tablespace name
+The audit history table name is set by default to HISTAUDIT. It is located by default in tablespace TOOLS.
+The tablespace TOOLS is mandatory for creating the table, or the script stops with a proper error.
+You can modify this default values on command line. Parameter 1 is the tablespace name, parameter 2 is the table name.
+The table name is not necessary if you want to change only the tablespace name, but you MUST specify the tablespace name (param 1) if you want to change the table name (param 2).
+Examples :
+CREATE OR USE AN EXISTING TABLE HISTAUDIT IN AN EXISTING TABLESPACE TOOLS :
+sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_oracle_html.sql
+CREATE OR USE AN EXISTING TABLE HISTAUDIT IN AN EXISTING TABLESPACE USERS :
+sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_oracle_html.sql USERS
+CREATE OR USE AN EXISTING TABLE AUDITDATA IN AN EXISTING TABLESPACE TOOLS :
+sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_oracle_html.sql TOOLS AUDITDATA # "TOOLS" is required as param 1
 
 ----------------------
 * Changelog :
@@ -104,8 +118,8 @@ If you want to change this tablespace name, you must change the "tbstools" const
 * 09/2018 ajout des informations sur la Flash recovery area
 * 2019-2020 some display and format improvements here and there.
 * 10/2020 v3.4 script modification to be launched by a normal user instead of SYSTEM
-* 11/2020 tablespace name and table name in variables for audit historic
+* 11/2020 put tablespace name and table name in sqlplus variables for audit history table and tablespace
 * 12/2020 add min/max/avg cpu usage
-  replace "&" as define character by "~", as & is used for HTML formatting
-  code cleaning
-
+  replace "&" as define character for whole script by "~", as "&" is used for HTML formatting
+  some code cleaning
+  add the ability to change the audit table name and its tablespace variable values on command line
