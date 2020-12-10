@@ -210,13 +210,14 @@ BEGIN
        where table_name='~tblhist' AND column_name='VALEUR';
       select char_length into collength from dba_tab_columns
        where table_name='~tblhist' and column_name='OBJ_NAME';
-      IF colval>0 AND collength>=255 THEN
+      IF colmodif=0 AND colval>0 AND collength>=255 THEN
          dbms_output.put_line('<td bgcolor="#33FF33">Table ~tblhist existante ');
       ELSE
+		  IF colmodif>0 THEN
+		     EXECUTE IMMEDIATE 'alter table ~tblhist drop column MODIFIED';
+		     dbms_output.put_line('<td bgcolor="#FF9900">Modification table ~tblhist (col MODIFIED)');
+		  END IF;
 		  IF colval=0 THEN
-		     IF colmodif>0 THEN
-		        EXECUTE IMMEDIATE 'alter table ~tblhist drop column MODIFIED';
-		     END IF;
 		     EXECUTE IMMEDIATE 'alter table ~tblhist add VALEUR varchar2(255)';
 		     dbms_output.put_line('<td bgcolor="#FF9900">Modification table ~tblhist (col VALEUR)');
 		  END IF;
@@ -394,6 +395,32 @@ where name = 'control_management_pack_access';
 prompt </table>
 prompt <br>
 
+-- *************************************** Environment variables
+prompt <table border=1 width=100% bgcolor="WHITE">
+prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Environnement</b></font></td></tr>
+prompt <tr><td bgcolor="WHITE"><b>Variable</b></td><td bgcolor="WHITE"><b>Valeur</b></td></tr>
+prompt <td bgcolor="LIGHTBLUE">ORACLE_BASE</td><td bgcolor="LIGHTBLUE">
+declare
+  valeur varchar2(300);
+begin
+  sys.dbms_system.get_env('ORACLE_BASE', valeur);
+  dbms_output.put_line(valeur);
+end;
+/
+prompt </td></tr>
+
+prompt <td bgcolor="LIGHTBLUE">ORACLE_HOME</td><td bgcolor="LIGHTBLUE">
+declare
+  valeur varchar2(300);
+begin
+  sys.dbms_system.get_env('ORACLE_HOME', valeur);
+  dbms_output.put_line(valeur);
+end;
+/
+prompt </td></tr>
+
+prompt </table>
+prompt <br>
 -- *************************************** SPFILE ou init.ora ?
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
@@ -403,7 +430,6 @@ prompt " width="20" height="20" alt="Tips..." title="Si l'instance est lanc&eacu
 
 prompt <td align=center><font color="WHITE"><b>Initialisation : pfile (init.ora) ou spfile ?</b></font></td></tr></table></td></tr>
 SELECT decode(value,'','<td bgcolor="ORANGE" width=15%>PFILE</td>','<td bgcolor="#33FF33" width=15%>SPFILE</td>'), decode(value,'','<td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td></tr>','<td>'||value||'</td></tr>') FROM v$parameter WHERE name like 'spfile' ;
--- TODO : "host echo $ORACLE_HOME;" affiche bien la variable dans sqlplus mais pas avec spool. 
 
 prompt </table>
 prompt <br>
@@ -1181,7 +1207,9 @@ print tips
 prompt " width="20" height="20" alt="Tips..." title="La d&eacute;tection des FULL SCANS est faite par le rapport entre les demandes de lecture et les chargements des donn&eacute;es du disque (les blocs). Un ratio > 50% signifie qu&#39;un petit nombre de demandes chargent un grand nombre de blocs, ce qui indique que les tables sont lus en entier trop fr&eacute;quemment."></td>
 
 prompt <td align=center><font color="WHITE"><b>D&eacute;tection des FULL SCANs</b></font></td></tr></table></td></tr>
-prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Read requests</b></td><td><b>Blocks read</b></td><td><b>ratio (% de full scans)</b></td></tr>
+prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Read requests</b></td><td><b>Blocks read</b></td><td><img src="data:image/gif;base64,
+print info
+prompt " alt="Info..." title="Ratio = v.phyrds/greatest(v.phyblkrd,1) FROM v$filestat v">&nbsp;<b>ratio (% de full scans)</b></td></tr>
 
 select
 '<tr>','<td bgcolor="LIGHTBLUE">',f.tablespace_name,'</td>',
@@ -1500,7 +1528,9 @@ print tips
 prompt " width="20" height="20" alt="Tips..." title="Augmenter SHARED_POOL_SIZE si les ratios (Library ET Dictionary cache) sont inf&eacute;rieur &agrave; 85%."></td>
 prompt <td align=center><font color="WHITE"><b>Dictionary cache</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
 
-prompt <tr><td width=15%><b>Gets</b></td><td width=15%><b>Get Misses</b></td><td width=15%><b>Scan</b></td><td width=15%><b>Scan Misses</b></td><td align=center><b>Ratio</b></td></tr>
+prompt <tr><td width=15%><b>Gets</b></td><td width=15%><b>Get Misses</b></td><td width=15%><b>Scan</b></td><td width=15%><b>Scan Misses</b></td><td><img src="data:image/gif;base64,
+print info
+prompt " alt="Info..." title="Ratio = ((sum(gets)-sum(getmisses))/sum(gets))*100 FROM v$rowcache">&nbsp;<b>Ratio</b></td></tr>
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',sum(gets),'</td>','<td bgcolor="LIGHTBLUE">',sum(getmisses),'</td>','<td bgcolor="LIGHTBLUE">',sum(scans),'</td>','<td bgcolor="LIGHTBLUE">',sum(scanmisses),'</td>',
 '<td bgcolor="',CouleurLimite(round((sum(gets)-sum(getmisses))/sum(gets),2)*100,85,5,0),'" align=right>',round((sum(gets)-sum(getmisses))/sum(gets),2)*100,' % </td>','</tr>'
@@ -1518,7 +1548,9 @@ prompt &nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
 prompt " width="20" height="20" alt="Info..." title="Augmenter SHARED_POOL_SIZE si les ratios (Library ET Dictionary cache) est inf&eacute;rieur &agrave; 85%"></td>
 prompt <td align=center><font color="WHITE"><b>Library cache</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
-prompt <tr><td><b>Executions</b></td><td><b>Rechargements</b></td><td colspan=2><b>Ratio</b></td></tr>
+prompt <tr><td><b>Executions</b></td><td><b>Rechargements</b></td><td colspan=2><img src="data:image/gif;base64,
+print info
+prompt " alt="Info..." title="Ratio = ((sum(pins)-sum(reloads))/sum(pins))*100 FROM v$librarycache">&nbsp;<b>Ratio</b></td></tr>
 
 select '<tr>','<td bgcolor="LIGHTBLUE" align=right>',sum(pins),'</td>' exec,
 '<td bgcolor="LIGHTBLUE" align=right>',sum(reloads),'</td>' recharg,
@@ -1547,7 +1579,9 @@ prompt </table><br>
 -- *************************************** Requetes les plus gourmandes
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=9><font color="WHITE"><b>Requ&ecirc;tes les plus gourmandes en ressources (moyennes par ex&eacute;cution)</b></font></td></tr>
-prompt <tr><td><b>Ex&eacute;cutions</b></td><td><b>Recalculs</b></td><td align=center><b>Ratio</br>r&eacute;-ex&eacute;cutions</b></td><td><b>Moy. tris</b></td><td><b>Moyenne lectures disque</b></td><td><b>Moyenne temps &eacute;coul&eacute; (&micro;sec)</b></td><td><b>Moyenne buffers</b></td><td><b>(Adresse v$sqlarea) Requ&ecirc;te SQL</b></td></tr>
+prompt <tr><td><b>Ex&eacute;cutions</b></td><td><b>Recalculs</b></td><td align=center><img src="data:image/gif;base64,
+print info
+prompt " alt="Info..." title="Ratio = (parse_calls/executions)*100 FROM v$sqlarea"><b>Ratio</br>r&eacute;-ex&eacute;cutions</b></td><td><b>Moy. tris</b></td><td><b>Moyenne lectures disque</b></td><td><b>Moyenne temps &eacute;coul&eacute; (&micro;sec)</b></td><td><b>Moyenne buffers</b></td><td><b>(Adresse v$sqlarea) Requ&ecirc;te SQL</b></td></tr>
 SELECT '<tr>','<td bgcolor="LIGHTBLUE">',sqla.executions,'</td>',
 '<td bgcolor="LIGHTBLUE">',sqla.parse_calls,'</td>',
 '<td bgcolor="LIGHTBLUE">',to_char(round((sqla.parse_calls/sqla.executions)*100,2),'99G999G990D00'),'%','</td>',
@@ -1633,10 +1667,11 @@ select '<tr>','<td bgcolor="LIGHTBLUE">'||name||'</td>','<td bgcolor="LIGHTBLUE"
 from v$sysstat
 where name like 'table scan%'
 UNION ALL
-select '<tr>','<td bgcolor="WHITE" title="(scans blocks / (scans short tables + scans long tables))"> Ratio</td>', '<td bgcolor="'||CouleurLimite(round(t1.value/(t2.value+t3.value),2),15,1,1)||'" align=right>'||to_char(round(t1.value/(t2.value+t3.value),2),'99G990D00')||'</td>','</tr>' from v$sysstat t1, v$sysstat t2, v$sysstat t3
+select '<tr>','<td bgcolor="WHITE"><img src="data:image/gif;base64,'||:info||'" alt="Info..." title="Ratio = (scans blocks / (scans short tables + scans long tables)) FROM v$sysstat"> Ratio      </td>', '<td bgcolor="'||CouleurLimite(round(t1.value/(t2.value+t3.value),2),15,1,1)||'" align=right>'||to_char(round(t1.value/(t2.value+t3.value),2),'99G990D00')||'</td>','</tr>' from v$sysstat t1, v$sysstat t2, v$sysstat t3
 where t1.name like 'table scan blocks gotten%'
 and t2.name like 'table scans (short tables)%'
 and t3.name like 'table scans (long tables)%';
+
 -- *************************************** Buffer cache : hit ratio
 prompt <tr><td bgcolor="#3399CC" colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
@@ -1649,7 +1684,7 @@ select '<tr>','<td bgcolor="LIGHTBLUE">'||name||'</td>', '<td bgcolor="LIGHTBLUE
 where name in ('db block gets from cache','consistent gets from cache','physical reads cache')
 order by 1;
 -- UNION ALL
-select '<tr>','<td bgcolor="WHITE" title="ratio global pour tous les pools ((db blocks gets+consistent gets)-physical reads)/(db blocks gets+consistent gets)">Ratio <b>v$sysstat</b></td>','<td bgcolor="'||CouleurLimite(round(((t1.value+t2.value)-t3.value)/(t1.value+t2.value),2)*100,70,10,0)||'" align=right>'||round(((t1.value+t2.value)-t3.value)/(t1.value+t2.value),2)*100||' %</td>','</tr>'
+select '<tr>','<td bgcolor="WHITE"><img src="data:image/gif;base64,'||:info||'" alt="Info..." title="Ratio (global pour tous les pools) = ((db blocks gets+consistent gets)-physical reads)/(db blocks gets+consistent gets) FROM v$sysstat"> Ratio</td>','<td bgcolor="'||CouleurLimite(round(((t1.value+t2.value)-t3.value)/(t1.value+t2.value),2)*100,70,10,0)||'" align=right>'||round(((t1.value+t2.value)-t3.value)/(t1.value+t2.value),2)*100||' %</td>','</tr>'
 from v$sysstat t1, v$sysstat t2, v$sysstat t3
 where t1.name='db block gets from cache' and t2.name='consistent gets from cache' and t3.name='physical reads cache';
 
@@ -1662,7 +1697,7 @@ select '<tr>','<td bgcolor="LIGHTBLUE">consistent_gets (pool '||name||')</td>' a
 -- UNION
 select '<tr>','<td bgcolor="LIGHTBLUE">physical_reads (pool '||name||')</td>' as name, '<td bgcolor="LIGHTBLUE" align=right>'||physical_reads||'</td>','</tr>' from  v$buffer_pool_statistics;
 -- UNION ALL
-select '<tr>','<td bgcolor="WHITE" title="Ratio par pool ((db blocks gets+consistent gets)-physical reads)/(db blocks gets+consistent gets)">Ratio <b>v$buffer_pool_statistics</b> (pool '||name||')</td>' as name,'<td bgcolor="'||CouleurLimite(round(((db_block_gets+consistent_gets)-physical_reads)/(db_block_gets+consistent_gets),2)*100,70,10,0)||'" align=right>'||round(((db_block_gets+consistent_gets)-physical_reads)/(db_block_gets+consistent_gets),2)*100||' %</td>','</tr>'
+select '<tr>','<td bgcolor="WHITE"><img src="data:image/gif;base64,'||:info||'" alt="Info..." title="Ratio (par pool) = ((db blocks gets+consistent gets)-physical reads)/(db blocks gets+consistent gets) FROM v$buffer_pool_statistics"> Ratio (pool '||name||')</td>' as name,'<td bgcolor="'||CouleurLimite(round(((db_block_gets+consistent_gets)-physical_reads)/(db_block_gets+consistent_gets),2)*100,70,10,0)||'" align=right>'||round(((db_block_gets+consistent_gets)-physical_reads)/(db_block_gets+consistent_gets),2)*100||' %</td>','</tr>'
 from v$buffer_pool_statistics;
 
 prompt </table><br>
@@ -1691,7 +1726,7 @@ prompt <tr><td width=15%><b>Nom</b></td><td width=15%><b>Valeur</b></td></tr>
 select '<tr>','<td bgcolor="LIGHTBLUE">'||name||'</td>','<td bgcolor="'||decode(name,'redo log space requests',CouleurLimite(value,100000,1000,1),'redo log space wait time',CouleurLimite(value,100000,1000,1),'LIGHTBLUE')||'" align=right>'||value||'</td>','</tr>' from v$sysstat
 where name like 'redo%'
 UNION ALL
-select '<tr>','<td bgcolor="WHITE">Ratio wastage/size</td>', '<td bgcolor="'||CouleurLimite(round(1-(t1.value/t2.value),2)*100,70,5,0)||'" align=right>'||round(1-(t1.value/t2.value),2)*100||' %</td>','</tr>'
+select '<tr>','<td bgcolor="WHITE"><img src="data:image/gif;base64,'||:info||'" alt="Info..." title="Ratio =  (redo wastage/redo size)*100 FROM v$sysstat"> Ratio</td>', '<td bgcolor="'||CouleurLimite(round(1-(t1.value/t2.value),2)*100,70,5,0)||'" align=right>'||round(1-(t1.value/t2.value),2)*100||' %</td>','</tr>'
 from v$sysstat t1, v$sysstat t2
 where t1.name like 'redo wastage'
 and t2.name like 'redo size';
@@ -1705,7 +1740,11 @@ prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:i
 print tips
 prompt " width="20" height="20" alt="Tips..." title="si un des ratio excede 5%, les performances sont affect&eacute;es, diminuer LOG_SMALL_ENTRY_SIZE." width=15%></td>
 prompt <td align=center><font color="WHITE"><b>Statistiques latchs (contentions)</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
-prompt <tr><td width=15%><b>Nom</b></td><td width=15%><b>Ratio misses/gets</b></td><td width=25%><b>Ratio immediate misses/immediate gets</b></td></tr>
+prompt <tr><td width=15%><b>Nom</b></td><td width=15%><img src="data:image/gif;base64,
+print info
+prompt " alt="Tips..." title="Ratio = (sum(misses)/(sum(gets))*100 FROM v$latch"> <b>Ratio misses/gets</b></td><td width=25%><img src="data:image/gif;base64,
+print info
+prompt " alt="Tips..." title="Ratio = (sum(immediate_misses)/(sum(immediate_misses+immediate_gets)*100 FROM v$latch"> <b>Ratio immediate misses/immediate gets</b></td></tr>
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',name,'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(round(sum(misses)/(sum(gets)+0.00000000001)*100),'990D00'),' %</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(round(sum(immediate_misses)/(sum(immediate_misses+immediate_gets)+0.00000000001)*100),'990D00'),' %</td>','</tr>'
 from   v$latch
@@ -1732,7 +1771,7 @@ prompt <tr><td width=15%><b>Nom</b></td><td width=15%><b>Valeur</b></td></tr>
 select '<tr>','<td bgcolor="LIGHTBLUE">'||name||'</td>', '<td bgcolor="LIGHTBLUE" align=right>'||value||'</td>','</tr>' from v$sysstat
 where name like 'sort%'
 UNION ALL
-select '<tr>','<td bgcolor="WHITE">Ratio (1 - (sorts disk / sorts memory))</td>', '<td bgcolor="'||CouleurLimite(round(1-(t1.value/t2.value),2)*100,85,5,0)||'" align=right>'||round(1-(t1.value/t2.value),2)*100||' %</td>','</tr>' from v$sysstat t1, v$sysstat t2
+select '<tr>','<td bgcolor="WHITE"><img src="data:image/gif;base64,'||:info||'" alt="Tips..." title="Ratio = (1 - (sorts disk / sorts memory))*100 FROM v$sysstat"> Ratio sorts disk / sorts memory</td>', '<td bgcolor="'||CouleurLimite(round(1-(t1.value/t2.value),2)*100,85,5,0)||'" align=right>'||round(1-(t1.value/t2.value),2)*100||' %</td>','</tr>' from v$sysstat t1, v$sysstat t2
 where t1.name like 'sorts (disk)%'
 and t2.name like 'sorts (memory)%';
 

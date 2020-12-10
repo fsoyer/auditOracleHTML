@@ -21,20 +21,18 @@
 
 * GLOBAL IMPROVEMENTS (RELATIVE TO THE ENTIRE SCRIPT)
 -----------------------------------------------------
-* TODO : translation on the fly. To try : Init a variable LANG at the beginning of the script. Then, init variables TXT_[ID_of_the_sentence]_[LANG] with text translated. Finally, in the script for each text, use something like : "SELECT TXT_[id]_&LANG" (to be tested and validated)
+* TODO : translation on the fly. Try : Init a variable LANG at the beginning of the script. Then, init variables TXT_[ID_of_the_sentence]_[LANG] with text translated. Finally, in the script for each text, use something like : "SELECT TXT_[id]_&LANG" (to be tested and validated)
 		 To think : change thousand separator in the same way ! Maybe just an environment variable when launching the script ?
-* TODO : force the creation of tablespace TOOLS (~100M) if not exist ? 
-* TODO : USE VARIABLES AT THE BEGINNING OF THE SCRIPT FOR ALERT THRESHOLDS ?
+* TODO : USE VARIABLES AT THE BEGINNING OF THE SCRIPT FOR ALERT THRESHOLDS
 * TODO : Do a summary (HTML anchors). Frames or javascript ?
 * TODO : Replace stored PL/SQL functions for colorization by javascript ?
-*        Javascript systematically inserted at the beginning of the HTML file, reusable in queries ?
-* TODO : add the text of ratios computed as "title" of the "Ratio" columns
-* TODO : replace all "dbms_output" by "prompt" (then remove "serveroutput on") : is this possible everywhere ?
+*        Like javascript systematically inserted at the beginning of the HTML file, reusable in queries
+* TODO : replace all "dbms_output" by "prompt" (then remove "serveroutput on") : is this possible everywhere, specially in pl/sql blocks ?
 *
 * LOCAL IMPROVEMENTS (RELATIVE TO EACH SECTION)
 -----------------------------------------------
 * *** Histaudit :
-* TODO : cleanup histo table > 1 year ?
+* TODO : cleanup histo table > 1 year
 		Put background to ORANGE on "UP Since" ("Up depuis le") if this date is greater than the last audit date (ie : the database was restarted SINCE the last audit)
 * *** Host :
 * BUG : the view v$osstat doesn't always have the column "NUM_CPU_CORES". In this case a blank line is returned.

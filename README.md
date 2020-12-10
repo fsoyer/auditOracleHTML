@@ -15,12 +15,13 @@ For a wider understanding, I'll translate parts from french to english, step by 
 ----------------------------------
 # USAGE
 * IMPORTANT : this script must be executed under sqlplus, as SYSTEM
-  If SYSTEM access is not permitted, it needs to be executed by a user with at least this privileges :
+  If SYSTEM access is not permitted, it needs to be executed by a user with at least this privileges (execute this as SYS) :
 ```
     CREATE USER MyAuditUser IDENTIFIED BY "password";
     ALTER USER MyAuditUser DEFAULT TABLESPACE TOOLS;
     ALTER USER MyAuditUser QUOTA UNLIMITED ON TOOLS;
     GRANT CONNECT, SELECT ANY DICTIONARY, CREATE ANY DIRECTORY TO MyAuditUser;
+    GRANT EXECUTE ON sys.dbms_system TO MyAuditUser;
 ```
 * The script produces an HTML file called "ORACLE_<SID>_<hostname>_<date>.html
 
@@ -118,8 +119,10 @@ sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_ora
 * 09/2018 ajout des informations sur la Flash recovery area
 * 2019-2020 some display and format improvements here and there.
 * 10/2020 v3.4 script modification to be launched by a normal user instead of SYSTEM
-* 11/2020 put tablespace name and table name in sqlplus variables for audit history table and tablespace
-* 12/2020 add min/max/avg cpu usage
-  replace "&" as define character for whole script by "~", as "&" is used for HTML formatting
+* 11/2020 put tablespace name and table name in substitution variables for audit history table and tablespace
+* 12/2020 added min/max/avg cpu usage
+  replaced "&" as define character for whole script by "~", as "&" is used for HTML formatting
   some code cleaning
-  add the ability to change the audit table name and its tablespace variable values on command line
+  added the ability to change the audit table name and its tablespace variable values on command line
+  added some "title" info icons on calculated ratio columns
+  display system environment variables
