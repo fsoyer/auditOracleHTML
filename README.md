@@ -126,3 +126,4 @@ sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_ora
   added the ability to change the audit table name and its tablespace variable values on command line
   added some "title" info icons on calculated ratio columns
   display system environment variables
+* 01/2021 v3.5 revision of the alert.log processing. Group same messages by day, and handle new date format for db version > 12.2

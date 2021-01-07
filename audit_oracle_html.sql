@@ -17,7 +17,7 @@
 
 -- *********************************************** SCRIPT **************************************************
 
-define script_version = 3.4
+define script_version = 3.5
 
 -- *************************************** Initialize SQLPlus variables
 set pages 999
@@ -171,7 +171,6 @@ DECLARE
    colmodif number;
    colval number;
    collength number;
-   tbs_tools_absent EXCEPTION;
 
 BEGIN
 
@@ -1844,37 +1843,21 @@ select instance_name db from v$instance;
 
 -- *************************************** create ou truncate final table "alert_log"
 prompt <!-- Creation des tables -->
--- force sqlplus to exit on error
 
-WHENEVER sqlerror EXIT sql.sqlcode
-DECLARE
-   table_exist number;
-   tabtools number;
 BEGIN
-   select count(table_name) into table_exist from dba_tables
-   where table_name='ALERT_LOG';
---   and owner = 'SYSTEM';
-   IF table_exist = 0 THEN
-      select count(tablespace_name) into tabtools from dba_tablespaces
-      where tablespace_name='~tbstools';
-      IF tabtools = 0 THEN
-         dbms_output.put_line('<td bgcolor="#33FF33">Ajouter un tablespace <b>~tbstools</b> pour la table ALERT_LOG</br>');
-         raise_application_error(-20003,'Tablespace ~tbstools does not exist');
-      ELSE
-         EXECUTE IMMEDIATE 'create table alert_log (
-                             alert_date date,
-                             alert_text varchar2(~~alert_length)
-                         ) TABLESPACE ~tbstools';
-      END IF;
-      EXECUTE IMMEDIATE 'create index alert_log_idx on alert_log(alert_date)';
-   ELSE
-      EXECUTE IMMEDIATE 'truncate table alert_log';
-   END IF;
+   EXECUTE IMMEDIATE 'create table alert_temp (
+    tmp_date date,
+    tmp_text varchar2(~~alert_length),
+    tmp_count int
+    ) TABLESPACE ~tbstools';
+
+   EXECUTE IMMEDIATE 'create table alert_log (
+    alert_date date,
+    alert_text varchar2(~~alert_length)
+    ) TABLESPACE ~tbstools';
+   EXECUTE IMMEDIATE 'create index alert_log_idx on alert_log(alert_date)';
 END;
 /
-
--- now avoid sqlplus to exit
-WHENEVER sqlerror CONTINUE;
 
 -- *****************************************  external table alert_log_disk (ak alert<SID>.log file)
 
@@ -1910,7 +1893,7 @@ BEGIN
    ELSE
       :sbdump := bdump || '/'; -- unix path
    END IF;
-   UTL_FILE.FGETATTR('BDUMP', 'alert_~_db..log', file_exists, file_length, file_block_size);
+   UTL_FILE.FGETATTR('BDUMPPERF', 'alert_~_db..log', file_exists, file_length, file_block_size);
    :sbsize := file_length;
 --   dbms_output.put_line (bdump);
 --   dbms_output.put_line ('alert_~_db..log');
@@ -1933,40 +1916,40 @@ BEGIN
    where table_name='ALERT_LOG_DISK';
 --   and owner = 'SYSTEM';
    IF table_exist <> 0 THEN
-      v_sql := 'drop table alert_log_disk';
-      EXECUTE IMMEDIATE v_sql;
+      EXECUTE IMMEDIATE 'drop table alert_log_disk';
    END IF;
 
    EXECUTE IMMEDIATE 'create table alert_log_disk (text varchar2(~~alert_length))
-                         organization external (
-                            type oracle_loader
-                            default directory BDUMPPERF
-                            access parameters (
-                               records delimited by newline nologfile nobadfile
-                               fields terminated by "&" ltrim
-                               )
-                            location(''alert_~_db..log'')
-                            )
-                         reject limit unlimited';
+    organization external (
+     type oracle_loader
+     default directory BDUMPPERF
+     access parameters (
+      records delimited by newline nologfile nobadfile
+      fields terminated by "&" ltrim
+      )
+     location(''alert_~_db..log'')
+     )
+    reject limit unlimited';
 END;
 /
 
 -- ************************************ update table alert_log from alert_log_disk
--- To be processed :
---  declare * ERREUR à la ligne 1 : ORA-01653: unable to extend table SYSTEM.ALERT_LOG by 128 in tablespace TOOLS ORA-06512: at line 83
 prompt <!-- Remplissage alert_log -->
 declare
-  isdate         number := 0;
+  isdate number := 0;
   start_updating number := 0;
-  rows_total     number := 0;
-  rows_inserted  number := 0;
+  rows_total number := 0;
+  rows_inserted number := 0;
   rows_identical number := 1;
-  alert_date     date;
+  alert_date date;
   last_alert_date date;
-  max_date       date;
-  alert_text     alert_log_disk.text%type;
+  max_date date;
+  alert_text alert_log_disk.text%type;
   last_alert_text alert_log_disk.text%type;
-  thisyear       char(4);
+  thisyear char(4);
+  uniform_param number:=0;
+  uniform_date char(5):= 'FALSE';
+  count_tmp number := 0;
 
 begin
 -- find a starting date : last audit
@@ -1979,13 +1962,15 @@ begin
     select extract(year from sysdate) into thisyear from dual;
     max_date := to_date(concat('01-01-',thisyear), 'dd-mm-yyyy');
   end if;
-  
+
   for r in (
      select text from alert_log_disk
      where text not like '%offlining%' 
        and text not like 'ARC_:%' 
        and text not like '%Thread 1 advanced to log sequence%'
        and text not like '%Current log#%seq#%mem#%'
+       and text not like 'Archived Log entry%'
+       and text not like 'Private strand flush not complete%'
        and LOWER(text) not like 'alter system archive log%'
        and text not like '%Undo Segment%lined%'
        and text not like '%alter tablespace%back%'
@@ -2018,105 +2003,70 @@ begin
 
     isdate     := 0;
     alert_text := null;
-
--- From char. 21 to 24 this can be a year. If yes (and we keep only the current year) it is a date, if not, it's any kind of text.
-    select count(*) into isdate  
-      from dual
-     where substr(r.text, 21) in
-      (to_char(sysdate, 'YYYY'), to_char(sysdate-365, 'YYYY'))
+    select count(value) into uniform_param from v$parameter where name = 'uniform_log_timestamp_format';
+    IF uniform_param > 0 THEN
+      select value into uniform_date from v$parameter where name = 'uniform_log_timestamp_format';
+    END IF;
+    IF uniform_date = 'TRUE' THEN
+    -- detect if text is a date, in new date format
+       select count(*) into isdate
+       from dual
+       where substr(r.text, 1, 4) in
+        (to_char(sysdate, 'YYYY'), to_char(sysdate-365, 'YYYY'))
        and r.text not like '%cycle_run_year%';
-    if (isdate = 1) then
--- from month (begin at char. 5) - force NLS in AMERICAN to avoid conversion errors ? Are all alert.log in AMERICAN ?
--- If it's necessary to take the NLS of the database, use the variable "&_nlsdate" instead of "AMERICAN"
-      select to_date(substr(r.text, 5),'Mon dd hh24:mi:ss rrrr','NLS_DATE_LANGUAGE = AMERICAN')
-        into alert_date 
-        from dual;
+       if (isdate = 1) then
+    -- exclude extra chars from uniform timestamp
+          select to_date(substr(replace(r.text,'T',' '), 1,19),'YYYY-MM-DD HH24:MI:SS')
+           into alert_date 
+           from dual;
+       end if;
+    ELSE
+    -- detect if text is a date, in old date format
+       select count(*) into isdate
+       from dual
+       where substr(r.text, 21) in
+        (to_char(sysdate, 'YYYY'), to_char(sysdate-365, 'YYYY'))
+       and r.text not like '%cycle_run_year%';
+       if (isdate = 1) then
+    -- from month (begin at char. 5) - force NLS in AMERICAN to avoid conversion errors ? Are all alert.log in AMERICAN ?
+    -- If it's necessary to take the NLS of the database, use the variable "&_nlsdate" instead of "AMERICAN"
+          select to_date(substr(r.text, 5),'Mon dd hh24:mi:ss rrrr','NLS_DATE_LANGUAGE = AMERICAN')
+           into alert_date 
+           from dual;
+       end if;
+    END IF;
 
--- Keep only lines with a date >= max_date
-      if (to_date(alert_date, 'dd-mm-yyyy') >= to_date(max_date, 'dd-mm-yyyy')) then
+    if (isdate = 1) then -- the line is a date
+      if (to_date(alert_date, 'dd-mm-yyyy') >= to_date(max_date, 'dd-mm-yyyy')) then -- on ne garde que les dates depuis dernier audit
         start_updating := 1;
       end if;
-    else
--- for multiline messages, suppress the part of the multiline we don't wat to display, so we'll can count identical messages generated by day.
+    else -- the line is a text message
       IF r.text not like 'Thread _ cannot allocate new log, sequence%' THEN
---   dbms_output.put_line(r.text||'</br>');
          alert_text := r.text;
       END IF;
     end if;
 
-    IF (alert_text IS NOT NULL) AND (start_updating = 1) THEN
-      IF (alert_text = last_alert_text) and (to_date(alert_date, 'dd-mm-yyyy') = to_date(last_alert_date, 'dd-mm-yyyy')) THEN
-        rows_identical := rows_identical + 1;
-      ELSE
-        IF rows_identical > 1 THEN -- count how many identical messages a day
-          INSERT INTO alert_log VALUES (last_alert_date, substr(last_alert_text, 1, ~~alert_length) || '<b> (message repeated ' || rows_identical || ' times this day</b>)');
-          rows_identical := 1;
-        ELSE
-          INSERT INTO alert_log VALUES (last_alert_date, substr(last_alert_text, 1, ~~alert_length));
-        END IF;
-      END IF;
---      rows_inserted := rows_inserted + 1;
-      commit;
-      last_alert_text := alert_text;
-      last_alert_date := alert_date;
+    IF (alert_text IS NOT NULL) AND (start_updating = 1) THEN -- this is text, within selected dates
+       select count(*) into count_tmp from alert_temp where to_date(tmp_date)=to_date(alert_date) and tmp_text=alert_text;
+       if count_tmp=1 then -- message already exist this day. Increment count
+          update alert_temp set tmp_count=(select tmp_count from alert_temp where to_date(tmp_date)=to_date(alert_date) and tmp_text=alert_text)+1
+          where to_date(tmp_date)=to_date(alert_date) and tmp_text=alert_text;
+       else -- first message of this type for the day
+          insert into alert_temp values (alert_date, alert_text, 1);
+       end if;
+       last_alert_date := alert_date;
+    END IF;
+
+    IF to_date(alert_date) <> to_date(last_alert_date) THEN
+       INSERT INTO alert_log (select tmp_date, decode(tmp_count, 1, tmp_text,  tmp_text || '<font size=-1><b> (message repeated ' || tmp_count || ' times this day</b></font>)') from alert_temp);
+       execute immediate 'truncate table alert_temp';
     END IF;
   END loop;
+  -- add last (current) day into alert_log
+  INSERT INTO alert_log (select tmp_date, decode(tmp_count, 1, tmp_text,  tmp_text || '<font size=-1><b> (message repeated ' || tmp_count || ' times this day</b></font>)') from alert_temp);
   commit;
 end;
 /
-
--- TODO : détecter les messages en doublon et les compter
--- la méthode actuelle avec le "IF r.text not like.." ne fonctionne pas, car il faudrait que les messages d'un même jour soient consécutifs
--- or, d'autres messages peuvent s'intercaler, cassant le comptage, même si lesdits messages ne sont pas affichés ensuite.
--- utiliser un curseur après la boucle FOR qui remplit la table et avant l'affichage. Compter les occurences d'un même jour, puis si > 1 supprimer tout sauf 1 du même jour et mettre à jour cette ligne avec le comptage.
--- 1. curseur sur les jours uniques
--- 2. curseur imbriqué sur 1 jour en particulier, garder la date et texte de l'occurrence 1 pour plus tard, compter les occurences (par rapport à des texte prédéfinis comme chekpoint, etc.)
--- 3. supprimer les occurences de ce jour sauf la 1 (par rapport à date et heure)
--- 4. Mettre à jour la 1 avec le comptage
--- NOTE : CA NE RESOUD PAS LE PROBLEME ORA-01653 SI TROP DE MESSAGES !!
-
-/*
-table external alert_log_disk
-curseur sur alert_log_disk
-compter les lignes identiques un même jour
- 1 jours uniques
- 2 imbriqué sur jour, compter lignes identiques checkpoint, etc
-PROBLEME ICI : LA DATE N'EST PAS SUR LA LIGNE ELLE-MEME ! Peut-on reconstruire une table de plus avec 2 col date+text (date ajoutée à chaque ligne de text), en évitant ORA-01653 ?
-
-garder date 1ere occurence et date de fin
----> on ne peut pas modifier alert_log_disk car c'est le fichier ! => créer un 3eme table pour les garder ?
-LE ROWID EXISTE AUSSI SUR L'EXTERNAL TABLE
-on peut donc créer une table temporaire qui contient date + rowid
-
-1ere passe pour repérer les lignes de date avec leur rowid, on garde dates unique + rowid
-ensuite on peut selectionner les lignes entre rowid date 1 et rowid date 2 (en s'arrêtant au jour)
-select rowid,text from alert_log_disk where rowid > '(AAFFFwAAAAAAAAAAAAsVAg' and rowid < '(AAFFFwAAAAAAAAAAAAsVaQ';
-
-sur cette sélection, on compte les lignes identiques selon textes préétablis (checkpoint, tns...)
-en gardant date début et date fin
-
-remplir alert_log avec alert_log_disk ligne à ligne, sauf textes comptés ci-dessus
-check date : si date différente de date - 1 (changement de jour), chercher date dans 3eme table et l'insérer, puis charger les autres lignes de cette date
-*/
-
--- Exemple curseur :
-/*
- declare
-   total_val number(6);
-   cursor c1 is
-     SELECT monthly_income
-     FROM employees
-     WHERE name = name_in;
-
- BEGIN
-   total_val := 0;
-   FOR employee_rec in c1
-   LOOP
-      total_val := total_val + employee_rec.monthly_income;
-   END LOOP;
-   RETURN total_val;
- END;
-*/
 
 -- ************************************ Affichage des logs
 prompt <!-- Affichage des logs -->
@@ -2125,7 +2075,9 @@ prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
 prompt " width="20" height="20" alt="Info..." title="Messages d'erreurs depuis le dernier audit. Si des messages sont affich&eacute;s, voir le d&eacute;tail dans le fichier alert<SID>.log, ou la table ALERT_LOG (r&eacute;sum&eacute;), ou la table externe ALERT_LOG_DISK (qui contient tout l'alert.log). En gras sont indiqu&eacute les lignes regroupant plusieurs messages cons&eacute;cutifs un m&ecirc;me jour."></td>
-prompt <td align=center><font color="WHITE"><b>~sbdump</b><b>alert_~_db..log (
+prompt <td align=center
+select decode(sign(~sbsize/1024/1024 - 30), -1, '', ' bgcolor=ORANGE') from dual;
+prompt ><font color="WHITE"><b>~sbdump</b><b>alert_~_db..log (
 
 select to_char(round(~sbsize/1024/1024,2),'99G999G990D00') from dual;
 prompt Mb)</b></font></td></tr></table></td></tr>
@@ -2135,31 +2087,25 @@ prompt <tr><td width=20%><b>Date</b></td><td width=80%><b>Texte</b></td></tr>
 -- http://www.adp-gmbh.ch/ora/admin/read_alert/index.html
 -- http://www.dba-oracle.com/t_writing_alert_log_message.htm
 
-select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN a.alert_text LIKE '%<b> (message repeated %' THEN '<b>'||to_char(a.alert_date,'DD/MM/RR HH24:MI')||'</b>' ELSE to_char(a.alert_date,'DD/MM/RR HH24:MI') END,'</td>', '<td bgcolor="LIGHTBLUE">',a.alert_text,'</td>','</tr>'
+select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN a.alert_text like '%message repeated%' THEN to_char(a.alert_date,'DD/MM/RR') ELSE to_char(a.alert_date,'DD/MM/RR HH24:MI') END,'</td>', '<td bgcolor="LIGHTBLUE">',a.alert_text,'</td>','</tr>'
   from alert_log a
---       (select max(to_date(date_aud)) date_aud from ~tblhist
---                where to_date(date_aud) < trunc(sysdate)) d
  where (alert_text like '%ORA-%'
   or alert_text like '%TNS-%'
   or LOWER(alert_text) like '%checkpoint not complete%'
   or LOWER(alert_text) like '%create%' or LOWER(alert_text) like '%drop%' or LOWER(alert_text) like '%alter%'
   or LOWER(alert_text) like 'shutdown%' or LOWER(alert_text) like 'shutting down instance%')
---  and a.alert_date > d.date_aud
 order by a.alert_date;
 
 DECLARE cnt_obj number := 0;
 BEGIN
    select count(a.alert_date) into cnt_obj
    from alert_log a
---        (select max(to_date(date_aud)) date_aud from ~tblhist
---               where to_date(date_aud) < trunc(sysdate)) d
    where (alert_text like '%ORA-%'
      or alert_text like '%TNS-%'
      or LOWER(alert_text) like '%checkpoint not complete%'
      or LOWER(alert_text) like '%create%' or LOWER(alert_text) like '%drop%' or LOWER(alert_text) like '%alter%'
      or LOWER(alert_text) like '%shutdown%' or LOWER(alert_text) like '%shutting down%')
 ;
---     and a.alert_date > d.date_aud;
 
    if cnt_obj=0 then
       dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor=LIGHTGREY></td></tr>');
@@ -2170,10 +2116,9 @@ end;
 prompt </table><br>
 
 -- *************************************** Cleaning of tables alert_log*
-prompt <!-- Nettoyage tables alert_log* -->
-DECLARE
-   table_exist number;
+prompt <!-- Nettoyage tables alert_* -->
 BEGIN
+   EXECUTE IMMEDIATE 'drop table alert_temp';
    EXECUTE IMMEDIATE 'drop table alert_log';
    EXECUTE IMMEDIATE 'drop table alert_log_disk';
 END;
