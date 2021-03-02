@@ -17,7 +17,7 @@
 
 -- *********************************************** SCRIPT **************************************************
 
-define script_version = 3.5
+define script_version = 3.6
 
 -- *************************************** Initialize SQLPlus variables
 set pages 999
@@ -106,7 +106,7 @@ END;
 
 -- *************************************** Variables and constants
 -- BEWARE : NO SPACES IN LISTS, OR THE VARIABLE WILL BE TRUNCED !
-define sysusers = ('SYS','SYSTEM','CTXSYS','DBSNMP','OUTLN','ORDSYS','ORDPLUGINS','MDSYS','DMSYS','WMSYS','WKSYS','OLAPSYS','SYSMAN','XDB','EXFSYS','TSMSYS','MGMT_VIEW','ORACLE_OCM','DIP','SI_INFORMTN_SCHEMA','ANONYMOUS')
+define sysusers = ('SYS','SYSTEM','CTXSYS','DBSNMP','OUTLN','ORDSYS','ORDPLUGINS','MDSYS','DMSYS','WMSYS','WKSYS','OLAPSYS','SYSMAN','XDB','EXFSYS','TSMSYS','MGMT_VIEW','ORACLE_OCM','DIP','SI_INFORMTN_SCHEMA','ANONYMOUS','APPQOSSYS')
 define exusers = ('SCOTT','HR','OE','PM','QS','QS_ADM','QS_CBADM','QS_CS','QS_ES','QS_OS','QS_WS','SH','PERFAUDIT')
 -- Icons (base64)
 variable tips varchar2(2000);
@@ -1286,7 +1286,6 @@ DECLARE
 -- use of $IF $THEN $END for pl/sql conditional compilation
 BEGIN
   $IF dbms_db_version.version >= 11 $THEN
---    v_sql := 'SELECT ''<tr><td bgcolor="LIGHTBLUE" colspan=4>''||client_name||''</td><td bgcolor="LIGHTBLUE">''||to_char(status)||''</td></tr>'' FROM dba_autotask_client';
     v_sql := 'select  ''<tr><td bgcolor="LIGHTBLUE" align=left>''|| client_name ||''</td><td bgcolor="BLUE" align=right><font color="WHITE"><b>''|| status || ''</b></font></td></tr>'' FROM dba_autotask_operation';
     open v_cur for v_sql;
     loop
@@ -1438,13 +1437,7 @@ select '<tr>','<td bgcolor="LIGHTBLUE">',name,'</td>' NOM,'<td bgcolor="LIGHTBLU
 prompt </table><br>
 
 -- MEMORY_TARGET_ADVICE
--- tableau "advice" de prédiction des perfs selon tailles de cache
--- http://pages.di.unipi.it/ghelli/didattica/bdldoc/B19306_01/server.102/b14211/memory.htm#i29118
--- !! si DB_CACHE_ADVICE est ON
-
--- TODO : renommer les variables v_res* pour refléter ce qu'elles contiennent
---        détecter le *_SIZE_FACTOR=1 pour garder la valeur ESTD_DB_TIME. Ensuite, si un ESTD_DB_TIME est inférieur à celui-ci, changer le background en orange (en modifiant la couleur dans v_res1, v_res3, v_res5
---        Mettre la ligne SIZE_FACTOR=1 dans une autre couleur ? Bleu légèrement plus sombre ?
+-- TODO : détecter le *_SIZE_FACTOR=1 pour garder la valeur ESTD_DB_TIME. Ensuite, si un ESTD_DB_TIME est inférieur à celui-ci, changer le background en orange (en modifiant la couleur dans v_res1, v_res3, v_res5
 
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>Memory target advice</b></font></td></tr>
@@ -1545,15 +1538,15 @@ print info
 prompt " width="20" height="20" alt="Info..." title="Library Cache Misses indicate that the Shared Pool is not big enough to hold the shared SQL area for all concurrently open cursors. If you have no Library Cache misses (PINS = 0), you may get a small increase in performance by setting CURSOR_SPACE_FOR_TIME = TRUE which prevents ORACLE from deallocating a shared SQL area while an application cursor associated with it is open. For Multi-threaded server, add 1K to SHARED_POOL_SIZE per user.">
 prompt &nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
-prompt " width="20" height="20" alt="Info..." title="Augmenter SHARED_POOL_SIZE si les ratios (Library ET Dictionary cache) est inf&eacute;rieur &agrave; 85%"></td>
+prompt " width="20" height="20" alt="Info..." title="Augmenter SHARED_POOL_SIZE si les ratios (Library ET Dictionary cache) sont inf&eacute;rieurs &agrave; 85%"></td>
 prompt <td align=center><font color="WHITE"><b>Library cache</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
 prompt <tr><td><b>Executions</b></td><td><b>Rechargements</b></td><td colspan=2><img src="data:image/gif;base64,
 print info
 prompt " alt="Info..." title="Ratio = ((sum(pins)-sum(reloads))/sum(pins))*100 FROM v$librarycache">&nbsp;<b>Ratio</b></td></tr>
 
-select '<tr>','<td bgcolor="LIGHTBLUE" align=right>',sum(pins),'</td>' exec,
-'<td bgcolor="LIGHTBLUE" align=right>',sum(reloads),'</td>' recharg,
-'<td bgcolor="',CouleurLimite(round((sum(pins)-sum(reloads))/sum(pins),2)*100,85,5,0),'" align=right colspan=2>',round((sum(pins)-sum(reloads))/sum(pins),2)*100,' %</td>' ratio,'</tr>'
+select '<tr>','<td bgcolor="LIGHTBLUE" align=right>',sum(pins),'</td>',
+'<td bgcolor="LIGHTBLUE" align=right>',sum(reloads),'</td>',
+'<td bgcolor="',CouleurLimite(round((sum(pins)-sum(reloads))/sum(pins),2)*100,85,5,0),'" align=right colspan=2>',round((sum(pins)-sum(reloads))/sum(pins),2)*100,' %</td>','</tr>'
 from v$librarycache;
 
 -- *************************************** Stat library cache
@@ -1563,7 +1556,7 @@ print info
 prompt " width="20" height="20" alt="Info..." title="GETHITS est le pourcentage de fois o&ugrave; un pointeur d&#39;objet a &eacute;t&eacute; requis et trouv&eacute; en mémoire. PINHITS est le pourcentage de fois o&ugrave; toutes les m&eacute;tadonn&eacute;es de d&eacute;finition de l&#39;objet ont &eacute;t&eacute; trouv&eacute;es en m&eacute;moire.">
 prompt &nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
-prompt " width="20" height="20" alt="Tips..." title="Rapprocher ces statistiques des ratios dictionary et library cache.<br>Augmenter SHARED_POOL_SIZE si les ratios sont inf&eacute;rieur &agrave; 90%. BODY et INDEX ne sont pas significatifs et peuvent &ecirc;tre ignor&eacute;s."></td>
+prompt " width="20" height="20" alt="Tips..." title="Rapprocher ces statistiques des ratios dictionary et library cache.<br>Augmenter SHARED_POOL_SIZE si les ratios sont inf&eacute;rieurs &agrave; 90%. BODY et INDEX ne sont pas significatifs et peuvent &ecirc;tre ignor&eacute;s."></td>
 prompt <td align=center><font color="WHITE"><b>Statistiques library cache par types de requ&ecirc;tes</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
 
 prompt <tr><td colspan=2><b>Namespace</b></td><td><b>GetHits</b></td><td><b>PinHits</b></td></tr>
@@ -1572,6 +1565,32 @@ select '<tr>','<td bgcolor="LIGHTBLUE" colspan=2>',namespace,'</td>',
 '<td bgcolor="',CouleurLimite(round(gethitratio,2)*100,70,10,0),'" align=right>',round(gethitratio,2)*100,' %</td>',
 '<td bgcolor="',CouleurLimite(round(pinhitratio,2)*100,70,10,0),'" align=right>',round(pinhitratio,2)*100,' %</td>','</tr>'
 from v$librarycache;
+
+-- *************************************** Parse ratios
+prompt <tr><td bgcolor="#3399CC" colspan=4>
+prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
+print info
+prompt " width="20" height="20" alt="Info..." title="The Soft Parse Ratio Oracle metric is the ratio of soft parses (SQL is already in library cache) to hard parses (SQL must be parsed, validated, and an execution plan formed).  The library cache (as set by shared_pool_size) serves to maximize soft parses (must be > 20%) and minimize hard parses (must be < 20%).  Excessive hard parsing could be due to a time shared_pool_size or because of SQL with embedded literal values. Total of hards + softs (+ describe) parses, can be less than execute count (which is the total number of calls, user and recursive, that executed SQL statements), so the sum of this ratios can be less than 100%."></td>
+prompt <td align=center><font color="WHITE"><b>Parse ratios</b></font></td></tr></table></td></tr>
+prompt <tr><td colspan=2><b>Type</b></td><td colspan=2><b>Ratio</b></td></tr>
+select '<tr>','<td bgcolor="LIGHTBLUE" colspan=2 title="Soft parses ((parse count total - parse count hard)/exec count from v$sysstat) : (SQL is already in library cache) must be > 20%">Soft Parses</td>', '<td bgcolor="', CouleurLimite(round(((sum(sst.value) - sum(ssh.value))/sum(sse.value))*100,2),30,10,0),'" align=right colspan=2>', to_char(round((sum(sst.value) - sum(ssh.value))/sum(sse.value)*100,2),'99G999G990D00'),'%</td>'
+from v$sysstat sst, v$sysstat ssh, v$sysstat sse
+where sst.name = 'parse count (total)'
+and ssh.name = 'parse count (hard)'
+and sse.name = 'execute count'
+-- round(((select sum(value) from v$sysstat where name = 'parse count (total)')- (select sum(value) from v$sysstat where name = 'parse count (hard)'))/(select sum(value) from v$sysstat where name = 'execute count')*100,2)||'%' "percentage" from dual
+union
+select '<tr>','<td bgcolor="LIGHTBLUE" colspan=2 title="Hard parses (parse count hard/exec count from v$sysstat) : (SQL must be parsed, validated, and an execution plan formed) must be < 20%">Hard Parses</td>', '<td bgcolor="', CouleurLimite(round((sum(ssh.value)/sum(sse.value))*100,2),30,10,1),'" align=right colspan=2>', to_char(round((sum(ssh.value)/sum(sse.value))*100,2),'99G999G990D00'),'%</td>'
+from v$sysstat ssh, v$sysstat sse
+where ssh.name = 'parse count (hard)'
+and sse.name = 'execute count'
+-- round((select sum(value) from v$sysstat where name = 'parse count (hard)')/(select sum(value) from v$sysstat where name = 'execute count')*100,2)||'%' "percentage" from dual
+union
+select '<tr>','<td bgcolor="LIGHTBLUE" colspan=2>Parse Failures</td>', '<td bgcolor="', CouleurLimite(round((sum(ssf.value)/sum(sst.value))*100,2),30,10,1),'" align=right colspan=2>', to_char(round((sum(ssf.value)/sum(sst.value))*100,2),'99G999G990D00'),'%</td>'
+from v$sysstat sst, v$sysstat ssf
+where sst.name = 'parse count (total)'
+and ssf.name = 'parse count (failures)';
+-- ,round((select sum(value) from v$sysstat where name = 'parse count (failures)')/(select sum(value) from v$sysstat where name = 'parse count (total)')*100,2)||'%' "percentage" from dual
 
 prompt </table><br>
 
@@ -1882,8 +1901,8 @@ BEGIN
      where DIRECTORY_NAME='BDUMPPERF';
 --    and owner in ('SYSTEM','SYS');
    IF dir_exist = 0 THEN
--- recreate a directory to bdump even if a system 'BDUMP' directory already exists, because if the script is
--- executed by a non-SYSTEM user, it as no privilege for using BDUMP.
+-- recreate a directory pointed to bdump even if a system 'BDUMP' directory already exists, because if the script is
+-- executed by a non-SYSTEM user, it as by default no privilege for using BDUMP.
      v_sql := 'create directory BDUMPPERF as ''' || bdump || '''';
      EXECUTE IMMEDIATE v_sql;
    END IF;
@@ -1895,6 +1914,7 @@ BEGIN
    END IF;
    UTL_FILE.FGETATTR('BDUMPPERF', 'alert_~_db..log', file_exists, file_length, file_block_size);
    :sbsize := file_length;
+--   DEBUG
 --   dbms_output.put_line (bdump);
 --   dbms_output.put_line ('alert_~_db..log');
 --   dbms_output.put_line ('FILE'||file_length);
@@ -1957,6 +1977,11 @@ begin
                 where to_date(date_aud) < trunc(sysdate);
   select count(*) into rows_total from alert_log_disk;
 
+  select count(value) into uniform_param from v$parameter where name = 'uniform_log_timestamp_format';
+  IF uniform_param > 0 THEN
+    select value into uniform_date from v$parameter where name = 'uniform_log_timestamp_format';
+  END IF;
+
   if (max_date is null) then
 -- First audit. Extract messages from 01/01 of the current year
     select extract(year from sysdate) into thisyear from dual;
@@ -1998,15 +2023,12 @@ begin
        and text not like 'ORA-21780 encountered when generating server alert SMG-3503%'
        and text not like 'Completed:%'
        and text not like 'ORA-INFO::%'
+       and text not like 'KGL object name :SELECT%'
   )
   loop
 
     isdate     := 0;
     alert_text := null;
-    select count(value) into uniform_param from v$parameter where name = 'uniform_log_timestamp_format';
-    IF uniform_param > 0 THEN
-      select value into uniform_date from v$parameter where name = 'uniform_log_timestamp_format';
-    END IF;
     IF uniform_date = 'TRUE' THEN
     -- detect if text is a date, in new date format
        select count(*) into isdate
@@ -2049,7 +2071,7 @@ begin
     IF (alert_text IS NOT NULL) AND (start_updating = 1) THEN -- this is text, within selected dates
        select count(*) into count_tmp from alert_temp where to_date(tmp_date)=to_date(alert_date) and tmp_text=alert_text;
        if count_tmp=1 then -- message already exist this day. Increment count
-          update alert_temp set tmp_count=(select tmp_count from alert_temp where to_date(tmp_date)=to_date(alert_date) and tmp_text=alert_text)+1
+          update alert_temp set tmp_count=(select tmp_count from alert_temp where to_date(tmp_date)=to_date(alert_date) and tmp_text=alert_text)
           where to_date(tmp_date)=to_date(alert_date) and tmp_text=alert_text;
        else -- first message of this type for the day
           insert into alert_temp values (alert_date, alert_text, 1);
@@ -2074,9 +2096,9 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Info..." title="Messages d'erreurs depuis le dernier audit. Si des messages sont affich&eacute;s, voir le d&eacute;tail dans le fichier alert<SID>.log, ou la table ALERT_LOG (r&eacute;sum&eacute;), ou la table externe ALERT_LOG_DISK (qui contient tout l'alert.log). En gras sont indiqu&eacute les lignes regroupant plusieurs messages cons&eacute;cutifs un m&ecirc;me jour."></td>
+prompt " width="20" height="20" alt="Info..." title="Messages d'erreurs depuis le dernier audit. Si des messages sont affich&eacute;s, voir le d&eacute;tail dans le fichier alert<SID>.log, ou la table ALERT_LOG (r&eacute;sum&eacute;), ou la table externe ALERT_LOG_DISK (qui contient tout l'alert.log). En gras sont indiqu&eacute;es les lignes regroupant plusieurs messages cons&eacute;cutifs un m&ecirc;me jour. Le titre ci-contre est affich&eacute; en orange si la taille du fichier dépasse 100Mo."></td>
 prompt <td align=center
-select decode(sign(~sbsize/1024/1024 - 30), -1, '', ' bgcolor=ORANGE') from dual;
+select decode(sign(~sbsize/1024/1024 - 100), -1, '', ' bgcolor=ORANGE') from dual;
 prompt ><font color="WHITE"><b>~sbdump</b><b>alert_~_db..log (
 
 select to_char(round(~sbsize/1024/1024,2),'99G999G990D00') from dual;
@@ -2087,7 +2109,7 @@ prompt <tr><td width=20%><b>Date</b></td><td width=80%><b>Texte</b></td></tr>
 -- http://www.adp-gmbh.ch/ora/admin/read_alert/index.html
 -- http://www.dba-oracle.com/t_writing_alert_log_message.htm
 
-select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN a.alert_text like '%message repeated%' THEN to_char(a.alert_date,'DD/MM/RR') ELSE to_char(a.alert_date,'DD/MM/RR HH24:MI') END,'</td>', '<td bgcolor="LIGHTBLUE">',a.alert_text,'</td>','</tr>'
+select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN a.alert_text like '%message repeated%' THEN '<b>'||to_char(a.alert_date,'DD/MM/RR')||'</b>' ELSE to_char(a.alert_date,'DD/MM/RR HH24:MI') END,'</td>', '<td bgcolor="LIGHTBLUE">',a.alert_text,'</td>','</tr>'
   from alert_log a
  where (alert_text like '%ORA-%'
   or alert_text like '%TNS-%'
