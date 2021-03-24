@@ -17,7 +17,7 @@
 
 -- *********************************************** SCRIPT **************************************************
 
-define script_version = 3.6
+define script_version = 3.7
 
 -- *************************************** Initialize SQLPlus variables
 set pages 999
@@ -1570,7 +1570,7 @@ from v$librarycache;
 prompt <tr><td bgcolor="#3399CC" colspan=4>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Info..." title="The Soft Parse Ratio Oracle metric is the ratio of soft parses (SQL is already in library cache) to hard parses (SQL must be parsed, validated, and an execution plan formed).  The library cache (as set by shared_pool_size) serves to maximize soft parses (must be > 20%) and minimize hard parses (must be < 20%).  Excessive hard parsing could be due to a time shared_pool_size or because of SQL with embedded literal values. Total of hards + softs (+ describe) parses, can be less than execute count (which is the total number of calls, user and recursive, that executed SQL statements), so the sum of this ratios can be less than 100%."></td>
+prompt " width="20" height="20" alt="Info..." title="The Soft Parse Ratio Oracle metric is the ratio of soft parses (SQL is already in library cache) to hard parses (SQL must be parsed, validated, and an execution plan formed).  The library cache (as set by shared_pool_size) serves to maximize soft parses (must be > 20%) and minimize hard parses (must be < 20%).  Excessive hard parsing could be due to a time shared_pool_size or because of SQL with embedded literal values. Total of hards + softs (+ describe) parses, can be less than execute count (which is the total number of calls, user and recursive, that executed SQL statements), so the sum of this ratios can be less than 100%. This global ratios are given by v$sysstat view."></td>
 prompt <td align=center><font color="WHITE"><b>Parse ratios</b></font></td></tr></table></td></tr>
 prompt <tr><td colspan=2><b>Type</b></td><td colspan=2><b>Ratio</b></td></tr>
 select '<tr>','<td bgcolor="LIGHTBLUE" colspan=2 title="Soft parses ((parse count total - parse count hard)/exec count from v$sysstat) : (SQL is already in library cache) must be > 20%">Soft Parses</td>', '<td bgcolor="', CouleurLimite(round(((sum(sst.value) - sum(ssh.value))/sum(sse.value))*100,2),30,10,0),'" align=right colspan=2>', to_char(round((sum(sst.value) - sum(ssh.value))/sum(sse.value)*100,2),'99G999G990D00'),'%</td>'
@@ -1578,19 +1578,34 @@ from v$sysstat sst, v$sysstat ssh, v$sysstat sse
 where sst.name = 'parse count (total)'
 and ssh.name = 'parse count (hard)'
 and sse.name = 'execute count'
--- round(((select sum(value) from v$sysstat where name = 'parse count (total)')- (select sum(value) from v$sysstat where name = 'parse count (hard)'))/(select sum(value) from v$sysstat where name = 'execute count')*100,2)||'%' "percentage" from dual
 union
 select '<tr>','<td bgcolor="LIGHTBLUE" colspan=2 title="Hard parses (parse count hard/exec count from v$sysstat) : (SQL must be parsed, validated, and an execution plan formed) must be < 20%">Hard Parses</td>', '<td bgcolor="', CouleurLimite(round((sum(ssh.value)/sum(sse.value))*100,2),30,10,1),'" align=right colspan=2>', to_char(round((sum(ssh.value)/sum(sse.value))*100,2),'99G999G990D00'),'%</td>'
 from v$sysstat ssh, v$sysstat sse
 where ssh.name = 'parse count (hard)'
 and sse.name = 'execute count'
--- round((select sum(value) from v$sysstat where name = 'parse count (hard)')/(select sum(value) from v$sysstat where name = 'execute count')*100,2)||'%' "percentage" from dual
 union
 select '<tr>','<td bgcolor="LIGHTBLUE" colspan=2>Parse Failures</td>', '<td bgcolor="', CouleurLimite(round((sum(ssf.value)/sum(sst.value))*100,2),30,10,1),'" align=right colspan=2>', to_char(round((sum(ssf.value)/sum(sst.value))*100,2),'99G999G990D00'),'%</td>'
 from v$sysstat sst, v$sysstat ssf
 where sst.name = 'parse count (total)'
 and ssf.name = 'parse count (failures)';
--- ,round((select sum(value) from v$sysstat where name = 'parse count (failures)')/(select sum(value) from v$sysstat where name = 'parse count (total)')*100,2)||'%' "percentage" from dual
+
+prompt <tr><td bgcolor="#3399CC" colspan=4>
+prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
+print info
+prompt " width="20" height="20" alt="Info..." title="Hard parse ration per session. This individual ratios are given by v$sesstat and v$statname views."></td>
+prompt <td align=center><font color="WHITE"><b>Hard parse par session (top 10)</b></font></td></tr></table></td></tr>
+prompt <tr><td><b>SID</b></td><td><b>Utilisateur</b></td><td><b>Hard parse count</b></td><td><b>Total parse</b></td></tr>
+select * from (
+select '<tr>' a,'<td bgcolor="LIGHTBLUE">' b,c.sid c,'<td bgcolor="LIGHTBLUE">' d,c.username e,'</td><td bgcolor="'||CASE WHEN (ah.value/at.value)*100 > 10 AND (ah.value/at.value)*100 < 20 THEN 'ORANGE' WHEN (ah.value/at.value)*100 >= 20 THEN '#FF0000' ELSE '#33FF33' END ||'" align=right>' f,ah.value||' ('||round((ah.value/at.value)*100,0)||'%)' g,'</td><td bgcolor="LIGHTBLUE" align=right>' h,at.value i,'</td></tr>' j
+from (select a.sid, a.value from v$sesstat a, v$statname b where a.statistic#=b.statistic# and b.name = 'parse count (hard)') ah,
+(select a.sid, a.value from v$sesstat a, v$statname b where a.statistic#=b.statistic# and b.name = 'parse count (total)') at,
+v$session c
+where c.sid=ah.sid and c.sid=at.sid
+and at.value > 0
+and c.type <> 'BACKGROUND' -- not system
+and c.username <> (select user from dual) -- and not us
+order by ah.value desc) limitrows
+where rownum <= 10;
 
 prompt </table><br>
 
