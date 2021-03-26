@@ -383,8 +383,8 @@ prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>O
 
 SELECT DISTINCT '<tr><td bgcolor="LIGHTBLUE" colspan=5>',PARAMETER,'</td>','</tr>' FROM V$OPTION where VALUE = 'TRUE' order by 1;
 
-prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Fonctions principales</b></font></td></tr>
-prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonction</b></font></td><td bgcolor="WHITE" align=center><b>activ&eacute;e oui/non (derni&egrave;re date d&#39;usage)</b></font></td></tr>
+prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Fonctionnalit&eacute;s</b></font></td></tr>
+prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td bgcolor="WHITE" align=center><b>activ&eacute;e oui/non (derni&egrave;re date d&#39;usage)</b></font></td></tr>
 
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>',version || ' - ' || name,'</td><td bgcolor="LIGHTBLUE" align=right>',CURRENTLY_USED || ' (' || decode(last_usage_date,NULL,'NONE',to_char(last_usage_date)) || ')</td></tr>' from dba_feature_usage_statistics where (detected_usages > 0 or name = 'Automatic Workload Repository') order by version;
 
@@ -1468,9 +1468,9 @@ BEGIN
       dbms_output.put_line(v_res1);
     else
       if memory_target=0 then -- if parameter MEMORY_TARGET is not initialized, display SGA stats instead
-        v_sql := 'select ''<tr>''||''<td bgcolor="LIGHTBLUE">''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),SGA_SIZE,decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="LIGHTBLUE" align=right>''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),to_char(SGA_SIZE_FACTOR,''990D00''),decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="LIGHTBLUE" align=right>''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),ESTD_DB_TIME,''</td>''||decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</tr>'' from v$sga_target_advice ORDER BY 2';
+        v_sql := 'select ''<tr>''||''<td bgcolor="''||decode(SGA_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''">''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),SGA_SIZE,decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(SGA_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''" align=right>''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),to_char(SGA_SIZE_FACTOR,''990D00''),decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(SGA_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''" align=right>''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),ESTD_DB_TIME,''</td>''||decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</tr>'' from v$sga_target_advice ORDER BY 2';
       else
-        v_sql := 'select ''<tr>''||''<td bgcolor="LIGHTBLUE">''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),MEMORY_SIZE,decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="LIGHTBLUE" align=right>''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),to_char(MEMORY_SIZE_FACTOR,''990D00''),decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="LIGHTBLUE" align=right>''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),ESTD_DB_TIME,''</td>''||decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</tr>'' from v$memory_target_advice ORDER BY 2';
+        v_sql := 'select ''<tr>''||''<td bgcolor="''||decode(MEMORY_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''">''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),MEMORY_SIZE,decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(MEMORY_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''" align=right>''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),to_char(MEMORY_SIZE_FACTOR,''990D00''),decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(MEMORY_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''" align=right>''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),ESTD_DB_TIME,''</td>''||decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</tr>'' from v$memory_target_advice ORDER BY 2';
       end if;
       open v_cur for v_sql;
       loop
