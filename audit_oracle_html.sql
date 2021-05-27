@@ -414,7 +414,7 @@ BEGIN
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Flashback Data Archive (Total Recall)'||CASE WHEN dbafats.counter + dbafat.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from DBA_FLASHBACK_ARCHIVE a left join DBA_FLASHBACK_ARCHIVE_TS b on a.FLASHBACK_ARCHIVE# = b.FLASHBACK_ARCHIVE#) dbafats, (select count(*) counter from DBA_FLASHBACK_ARCHIVE_TABLES) dbafat;
       dbms_output.put_line(html);
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4>ADVANCED COMPRESSION option</td><td bgcolor="#33FF33" align=right><font color=black>NOT INSTALLED</font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4>ADVANCED COMPRESSION</td><td bgcolor="#33FF33" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -439,7 +439,7 @@ BEGIN
          dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATA MINING</b></td><td bgcolor="#33FF33" align=right><font color=black>DATA MINING INSTALLED, NOT USED</font></td></tr>');
       end if;
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4>DATA MINING option</td><td bgcolor="#33FF33" align=right><font color=black>NOT INSTALLED</font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4>DATA MINING </td><td bgcolor="#33FF33" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -456,7 +456,7 @@ BEGIN
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ACTIVE DATA GUARD</b> - Fast Incremental Backup on Physical Standby'||CASE WHEN vbt.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>ACTIVE DATA GUARD USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>ACTIVE DATA GUARD NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from V$BLOCK_CHANGE_TRACKING a, V$DATABASE b where b.DATABASE_ROLE like 'PHYSICAL STANDBY' and a.STATUS = 'ENABLED') vbt;
       dbms_output.put_line(html);
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4>ACTIVE DATA GUARD option</td><td bgcolor="#33FF33" align=right><font color=black>NOT INSTALLED</font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4>ACTIVE DATA GUARD</td><td bgcolor="#33FF33" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -471,7 +471,7 @@ BEGIN
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>REAL APPLICATION CLUSTERS</b>'||CASE WHEN gvp.counter > 0 AND gvi.counter > 1 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>REAL APPLICATION CLUSTERS USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>REAL APPLICATION CLUSTERS NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from GV$PARAMETER where NAME = 'cluster_database') gvp, (select count(*) counter from GV$INSTANCE) gvi;
       dbms_output.put_line(html);
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>REAL APPLICATION CLUSTERS</b></td><td bgcolor="#33FF33" align=right><font color=black>OPTION NOT INSTALLED</font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>REAL APPLICATION CLUSTERS</b></td><td bgcolor="#33FF33" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -490,7 +490,7 @@ BEGIN
       execute immediate v_sql;
       dbms_output.put_line(html);
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>SPATIAL</b></td><td bgcolor="#33FF33" align=right><font color=black>OPTION NOT INSTALLED</font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>SPATIAL</b></td><td bgcolor="#33FF33" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -521,7 +521,7 @@ BEGIN
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>PARTITIONING</b>'||CASE WHEN objt.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>PARTITIONING USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>PARTITIONING NOT USED' END||'</font></td></tr>' into html from (select count(*) counter FROM DBA_OBJECTS WHERE OBJECT_TYPE LIKE '%PARTITION%'  and owner not in ~sysusers and owner not in ~exusers) objt;
       dbms_output.put_line(html);
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>PARTITIONING</b></td><td bgcolor="#33FF33" align=right><font color=black>OPTION NOT INSTALLED</font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>PARTITIONING</b></td><td bgcolor="#33FF33" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -536,7 +536,7 @@ BEGIN
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>PARTITIONING</b>'||CASE WHEN dbat.counter + dbal.counter + dbalp.counter + dbalsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>PARTITIONING USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>PARTITIONING NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from DBA_TABLESPACES where ENCRYPTED='YES') dbat, (select count(*) counter from DBA_LOBS where ENCRYPT not in ('NO', 'NONE')) dbal, (select count(*) counter from DBA_LOB_PARTITIONS where ENCRYPT not in ('NO', 'NONE')) dbalp, (select count(*) counter from DBA_LOB_SUBPARTITIONS where ENCRYPT not in ('NO', 'NONE')) dbalsp;
       dbms_output.put_line(html);
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>PARTITIONING</b></td><td bgcolor="#33FF33" align=right><font color=black>OPTION NOT INSTALLED</font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>PARTITIONING</b></td><td bgcolor="#33FF33" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -553,7 +553,7 @@ BEGIN
       execute immediate v_sql;
       dbms_output.put_line(html);
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATABASE VAULT</b></td><td bgcolor="#33FF33" align=right><font color=black>OPTION NOT INSTALLED</font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATABASE VAULT</b></td><td bgcolor="#33FF33" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -568,7 +568,7 @@ BEGIN
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>OLAP</b>'||CASE WHEN dbac.counter + dbaa.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>OLAP USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>OLAP NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from  DBA_CUBES where owner not in ~sysusers and owner not in ~exusers) dbac, (select count(*) counter from DBA_AWS) dbaa;
       dbms_output.put_line(html);
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>OLAP</b></td><td bgcolor="#33FF33" align=right><font color=black>OPTION NOT INSTALLED</font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>OLAP</b></td><td bgcolor="#33FF33" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -586,7 +586,7 @@ BEGIN
    IF opt > 0 then
          select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>DATABASE IN-MEMORY</b>'||CASE WHEN dbat.counter + dbatp.counter + dbatsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>DATABASE IN-MEMORY USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>DATABASE IN-MEMORY NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from dba_tables where inmemory in ('ENABLED')) dbat, (select count(*) counter from dba_tab_partitions where inmemory in ('ENABLED')) dbatp, (select count(*) counter from dba_tab_subpartitions where inmemory in ('ENABLED')) dbatsp;
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATABASE IN-MEMORY</b></td><td bgcolor="#33FF33" align=right><font color=black>OPTION NOT INSTALLED</font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATABASE IN-MEMORY</b></td><td bgcolor="#33FF33" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
    $END
 END;
