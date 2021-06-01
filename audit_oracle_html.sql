@@ -385,8 +385,9 @@ SELECT DISTINCT '<tr><td bgcolor="LIGHTBLUE" colspan=5>',PARAMETER,'</td>','</tr
 
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Fonctionnalit&eacute;s autoris&eacute;es (&agrave; v&eacute;rifier selon l'&eacute;dition)</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td bgcolor="WHITE" align=center><b>activ&eacute;e (derni&egrave;re date d&#39;usage)</b></font></td></tr>
+-- '
 
-select '<tr><td bgcolor="LIGHTBLUE" colspan=4>',name,'</td><td bgcolor="LIGHTBLUE" align=right>',CURRENTLY_USED || ' (' || decode(last_usage_date,NULL,'NONE',to_char(last_usage_date)) || ')</td></tr>' from dba_feature_usage_statistics where detected_usages > 0 and name not in ('Oracle Utility Datapump (Export)','Data Guard') and version=(select max(version) from dba_feature_usage_statistics) order by name;
+select '<tr><td bgcolor="LIGHTBLUE" colspan=4>',a.name,'</td><td bgcolor="LIGHTBLUE" align=right>',a.CURRENTLY_USED || ' (' || decode(a.last_usage_date,NULL,'NONE',to_char(a.last_usage_date)) || ')</td></tr>' from dba_feature_usage_statistics a where a.detected_usages > 0 and a.name not in ('Oracle Utility Datapump (Export)','Data Guard') and a.last_usage_date = (select max(last_usage_date) from dba_feature_usage_statistics where name = a.name) order by a.name;
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','Automatic Workload Repository','</td><td bgcolor="LIGHTBLUE" align=right><font color=black>', to_char(display_value) || '</font></td></tr>' from v$parameter where name = 'Automatic Workload Repository';
 
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
