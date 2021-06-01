@@ -129,3 +129,4 @@ sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_ora
 * 01/2021 v3.5 revision of the alert.log processing. Group same messages by day, and handle new date format for db version > 12.2
 * 03/2021 v3.6 added soft and hard parse ratio for library cache from v$sysstat
 * 03/2021 v3.7 added individual hard parse ratio per session
+* 05/2021 v3.8 check of licensed features usage

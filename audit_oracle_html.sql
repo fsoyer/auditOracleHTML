@@ -17,7 +17,7 @@
 
 -- *********************************************** SCRIPT **************************************************
 
-define script_version = 3.7
+define script_version = 3.8
 
 -- *************************************** Initialize SQLPlus variables
 set pages 999
@@ -33,7 +33,7 @@ set head off
 -- "&" is used for HTML formatting. We need to change it for Oracle "DEFINE" special character
 set define "~"
 
--- On force quelques formats
+-- Force some formats
 ALTER SESSION SET NLS_NUMERIC_CHARACTERS = ", ";
 ALTER SESSION SET NLS_DATE_FORMAT = 'DD/MM/YYYY';
 ALTER SESSION SET NLS_DATE_LANGUAGE = 'FRENCH';
@@ -383,18 +383,17 @@ prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>O
 
 SELECT DISTINCT '<tr><td bgcolor="LIGHTBLUE" colspan=5>',PARAMETER,'</td>','</tr>' FROM V$OPTION where VALUE = 'TRUE' order by parameter;
 
-prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Fonctionnalit&eacute;s autoris&eacute;es par d&eacute;faut</b></font></td></tr>
+prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Fonctionnalit&eacute;s autoris&eacute;es (&agrave; v&eacute;rifier selon l'&eacute;dition)</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td bgcolor="WHITE" align=center><b>activ&eacute;e (derni&egrave;re date d&#39;usage)</b></font></td></tr>
 
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>',name,'</td><td bgcolor="LIGHTBLUE" align=right>',CURRENTLY_USED || ' (' || decode(last_usage_date,NULL,'NONE',to_char(last_usage_date)) || ')</td></tr>' from dba_feature_usage_statistics where detected_usages > 0 and name not in ('Oracle Utility Datapump (Export)','Data Guard') and version=(select max(version) from dba_feature_usage_statistics) order by name;
-
-select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','Control management pack (diagnostic pack, tuning pack)','</td><td bgcolor="LIGHTBLUE" align=right>', to_char(display_value) || '</td></tr>' from v$parameter where name in ('Automatic Workload Repository','control_management_pack_access');
+select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','Automatic Workload Repository','</td><td bgcolor="LIGHTBLUE" align=right><font color=black>', to_char(display_value) || '</font></td></tr>' from v$parameter where name = 'Automatic Workload Repository';
 
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="Si une des lignes apparait en rouge, la fonctionnalit&eacute; (en gras) correspondante doit avoir &eacute;t&eacute; acquise s&eacute;par&eacute;ment."></td>
-prompt <td align=center><font color="WHITE"><b>Fonctionnalit&eacute;s payantes</b></font></td></tr></table></td></tr>
+prompt " width="20" height="20" alt="Tips..." title="Si une ou des lignes apparaissent en rouge, les fonctionnalit&eacute; (en gras) correspondante doivent avoir &eacute;t&eacute; explicitement acquises."></td>
+prompt <td align=center><font color="WHITE"><b>Fonctionnalit&eacute;s soumises &agrave; licence</b></font></td></tr></table></td></tr>
 
 prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td bgcolor="WHITE" align=center><b>utilis&eacute;e</b></font></td></tr>
 
@@ -473,10 +472,10 @@ DECLARE
 BEGIN
    SELECT count(*) into opt FROM V$OPTION where PARAMETER in ('Real Application Clusters', 'Parallel Server') and VALUE = 'TRUE';
    IF opt > 0 then
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>REAL APPLICATION CLUSTERS</b>'||CASE WHEN gvp.counter > 0 AND gvi.counter > 1 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>REAL APPLICATION CLUSTERS USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>REAL APPLICATION CLUSTERS NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from GV$PARAMETER where NAME = 'cluster_database') gvp, (select count(*) counter from GV$INSTANCE) gvi;
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>REAL APPLICATION CLUSTERS (RAC)</b>'||CASE WHEN gvp.counter > 0 AND gvi.counter > 1 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>REAL APPLICATION CLUSTERS USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>REAL APPLICATION CLUSTERS NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from GV$PARAMETER where NAME = 'cluster_database') gvp, (select count(*) counter from GV$INSTANCE) gvi;
       dbms_output.put_line(html);
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>REAL APPLICATION CLUSTERS</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>REAL APPLICATION CLUSTERS (RAC)</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -596,6 +595,10 @@ BEGIN
    $END
 END;
 /
+
+-- OPTION : MANAGEMENT PACK
+select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','<b>CONTROL MANAGEMENT PACK</b> (diagnostic pack, tuning pack)','</td><td bgcolor="', CASE WHEN display_value = 'NONE' THEN '#33FF33" align=right><font color=black>' ELSE '#FF0000" align=right><font color=white>' END, to_char(display_value) || '</font></td></tr>' from v$parameter where UPPER(name) like '%CONTROL_MANAGEMENT_PACK_ACCESS%';
+select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','<b>CONTROL MANAGEMENT PACK</b> (DDL logging)','</td><td bgcolor="', CASE WHEN display_value = 'FALSE' THEN '#33FF33" align=right><font color=black>' ELSE '#FF0000" align=right><font color=white>' END, to_char(display_value) || '</font></td></tr>' from v$parameter where UPPER(name) like '%ENABLE_DDL_LOGGING%';
 
 prompt </table>
 prompt <br>
