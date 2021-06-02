@@ -625,8 +625,12 @@ prompt <td bgcolor="LIGHTBLUE">ORACLE_BASE</td><td bgcolor="LIGHTBLUE">
 declare
   valeur varchar2(300);
 begin
-  sys.dbms_system.get_env('ORACLE_BASE', valeur);
-  dbms_output.put_line(valeur);
+   $IF dbms_db_version.version > 10 $THEN
+   sys.dbms_system.get_env('ORACLE_BASE', valeur);
+   dbms_output.put_line(valeur);
+   $ELSE
+   dbms_output.put_line('Not applicable');
+   $END
 end;
 /
 prompt </td></tr>
@@ -635,8 +639,12 @@ prompt <td bgcolor="LIGHTBLUE">ORACLE_HOME</td><td bgcolor="LIGHTBLUE">
 declare
   valeur varchar2(300);
 begin
-  sys.dbms_system.get_env('ORACLE_HOME', valeur);
-  dbms_output.put_line(valeur);
+   $IF dbms_db_version.version > 10 $THEN
+   sys.dbms_system.get_env('ORACLE_HOME', valeur);
+   dbms_output.put_line(valeur);
+   $ELSE
+   dbms_output.put_line('Not applicable');
+   $END
 end;
 /
 prompt </td></tr>
