@@ -390,6 +390,7 @@ prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>',a.name,'</td><td bgcolor="LIGHTBLUE" align=right>',a.CURRENTLY_USED || ' (' || decode(a.last_usage_date,NULL,'NONE',to_char(a.last_usage_date)) || ')</td></tr>' from dba_feature_usage_statistics a where a.detected_usages > 0 and a.name not in ('Oracle Utility Datapump (Export)','Data Guard') and a.last_usage_date = (select max(last_usage_date) from dba_feature_usage_statistics where name = a.name) order by a.name;
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','Automatic Workload Repository','</td><td bgcolor="LIGHTBLUE" align=right><font color=black>', to_char(display_value) || '</font></td></tr>' from v$parameter where name = 'Automatic Workload Repository';
 
+-- ***** NON-FREE FEATURES
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
@@ -398,29 +399,33 @@ prompt <td align=center><font color="WHITE"><b>Fonctionnalit&eacute;s soumises &
 
 prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td bgcolor="WHITE" align=center><b>utilis&eacute;e</b></font></td></tr>
 
--- ***** NON-FREE FEATURES
 -- OPTION : ADVANCED COMPRESSION
 DECLARE
    opt number;
    html varchar2(4000);
 BEGIN
+   $IF dbms_db_version.version > 10 $THEN
+
    SELECT count(*) into opt FROM V$OPTION where PARAMETER like '%Advanced Compression%' and VALUE = 'TRUE';
    IF opt > 0 then
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - OLTP Table Compression'||CASE WHEN dbat.counter + dbatp.counter + dbatsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from dba_tables where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and owner not in ~sysusers and owner not in ~exusers) dbat, (select count(*) counter from dba_tab_partitions where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and table_owner not in ~sysusers and table_owner not in ~exusers) dbatp, (select count(*) counter from dba_tab_subpartitions where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and table_owner not in ~sysusers and table_owner not in ~exusers) dbatsp;
       dbms_output.put_line(html);
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - SecureFiles Compression and Deduplication'||CASE WHEN dbal.counter + dbalp.counter + dbalsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from dba_lobs where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and owner not in ~sysusers and owner not in ~exusers) dbal, (select count(*) counter from dba_lob_partitions where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalp, (select count(*) counter from dba_lob_subpartitions where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalsp;
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Guard Network Compression'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Data Guard' and lower(to_char(dbms_lob.substr(FEATURE_INFO,4000))) like '%compression used: true%' and version=(select max(version) from dba_feature_usage_statistics where name = 'Data Guard');
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Guard Network Compression'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Data Guard' and lower(to_char(dbms_lob.substr(FEATURE_INFO,4000))) like '%compression used: true%' and last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Data Guard');
       dbms_output.put_line(html);
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - ARCHIVES Compression'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from V$PARAMETER where UPPER(name) like '%LOG_ARCHIVE_DEST%' and UPPER(value) like '%COMPRESSION=ENABLE%';
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)' and version=(select max(version) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)');
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)' and last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)');
       dbms_output.put_line(html);
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Flashback Data Archive (Total Recall)'||CASE WHEN dbafats.counter + dbafat.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from DBA_FLASHBACK_ARCHIVE a left join DBA_FLASHBACK_ARCHIVE_TS b on a.FLASHBACK_ARCHIVE# = b.FLASHBACK_ARCHIVE#) dbafats, (select count(*) counter from DBA_FLASHBACK_ARCHIVE_TABLES) dbafat;
       dbms_output.put_line(html);
    else
       dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4>ADVANCED COMPRESSION</td><td bgcolor="LIGHTBLUE" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
+   $ELSE
+      select '' into html from dual;
+   $END
 END;
 /
 
@@ -432,19 +437,19 @@ DECLARE
 BEGIN
    SELECT count(*) into opt FROM V$OPTION where PARAMETER like '%Data Mining%' and VALUE = 'TRUE';
    IF opt > 0 then
-      $IF dbms_db_version.version < 11 $THEN
-         select count(*) into model from dmsys.dm$p_model;
-      $ELSE
-         select count(*) into model from SYS.MODEL$;
-      $END
+      $IF dbms_db_version.version > 10 $THEN
+      select count(*) into model from SYS.MODEL$;
       IF model > 0
       then
          dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATA MINING</b></td><td bgcolor="#FF0000" align=right><font color=black>DATA MINING USED</font></td></tr>');
       else
          dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATA MINING</b></td><td bgcolor="#33FF33" align=right><font color=black>DATA MINING INSTALLED, NOT USED</font></td></tr>');
       end if;
+      $ELSE
+      select '' into html from dual;
+      $END
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4>DATA MINING </td><td bgcolor="LIGHTBLUE" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATA MINING</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -461,7 +466,7 @@ BEGIN
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ACTIVE DATA GUARD</b> - Fast Incremental Backup on Physical Standby'||CASE WHEN vbt.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>ACTIVE DATA GUARD USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>ACTIVE DATA GUARD NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from V$BLOCK_CHANGE_TRACKING a, V$DATABASE b where b.DATABASE_ROLE like 'PHYSICAL STANDBY' and a.STATUS = 'ENABLED') vbt;
       dbms_output.put_line(html);
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4>ACTIVE DATA GUARD</td><td bgcolor="LIGHTBLUE" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>ACTIVE DATA GUARD</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
 END;
 /
@@ -536,6 +541,7 @@ DECLARE
    opt number;
    html varchar2(4000);
 BEGIN
+   $IF dbms_db_version.version > 10 $THEN
    SELECT count(*) into opt FROM DBA_TABLESPACES where ENCRYPTED='YES';
    IF opt > 0 then
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED SECURITY (Securefiles encryption)</b>'||CASE WHEN dbat.counter + dbal.counter + dbalp.counter + dbalsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>ADVANCED SECURITY USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>ADVANCED SECURITY NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from DBA_TABLESPACES where ENCRYPTED='YES') dbat, (select count(*) counter from DBA_LOBS where ENCRYPT not in ('NO', 'NONE') and owner not in ~sysusers and owner not in ~exusers) dbal, (select count(*) counter from DBA_LOB_PARTITIONS where ENCRYPT not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalp, (select count(*) counter from DBA_LOB_SUBPARTITIONS where ENCRYPT not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalsp;
@@ -543,6 +549,9 @@ BEGIN
    else
       dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>ADVANCED SECURITY</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
+   $ELSE
+      select '' into html from dual;
+   $END
 END;
 /
 
@@ -568,6 +577,7 @@ DECLARE
    opt number;
    html varchar2(4000);
 BEGIN
+   $IF dbms_db_version.version > 10 $THEN
    SELECT count(*) into opt FROM V$OPTION where PARAMETER = 'OLAP' and VALUE = 'TRUE';
    IF opt > 0 then
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>OLAP</b>'||CASE WHEN dbac.counter + dbaa.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>OLAP USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>OLAP NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from  DBA_CUBES where owner not in ~sysusers and owner not in ~exusers) dbac, (select count(*) counter from DBA_AWS) dbaa;
@@ -575,6 +585,9 @@ BEGIN
    else
       dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>OLAP</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black><i>OPTION NOT INSTALLED</i></font></td></tr>');
    end if;
+   $ELSE
+      select '' into html from dual;
+   $END
 END;
 /
 
