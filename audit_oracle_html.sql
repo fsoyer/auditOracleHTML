@@ -293,12 +293,15 @@ where METRIC_NAME = 'Database CPU Time Ratio'
  AND cpu.STAT_NAME = 'NUM_CPUS'
 AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC);
 
-select '<tr><td bgcolor="LIGHTBLUE">', metric_name, '</td><td bgcolor="LIGHTBLUE" align=left colspan=2>', METRIC_UNIT, '</td><td bgcolor="LIGHTBLUE" align=right>', round(value,2), '%</td></tr>'
+select '<tr><td bgcolor="LIGHTBLUE">', metric_name, '</td><td bgcolor="LIGHTBLUE" align=left colspan=2>', METRIC_UNIT, '</td><td bgcolor="', CouleurLimite(round(value,2),30,10,1),'" align=right>', round(value,2), '%</td></tr>'
 from SYS.V_$SYSMETRIC
-where METRIC_NAME IN ('Host CPU Utilization (%)','Database Wait Time Ratio')
-AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC)
-Order by 2 asc;
--- prompt </td></tr>
+where METRIC_NAME = 'Database Wait Time Ratio'
+AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC);
+
+select '<tr><td bgcolor="LIGHTBLUE">', metric_name, '</td><td bgcolor="LIGHTBLUE" align=left colspan=2>', METRIC_UNIT, '</td><td bgcolor="', CouleurLimite(round(value,2),80,10,1),'" align=right>', round(value,2), '%</td></tr>'
+from SYS.V_$SYSMETRIC
+where METRIC_NAME = 'Host CPU Utilization (%)'
+AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC);
 
 prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Usage CPU d&eacute;taill&eacute;</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE"><b>Statistique</b></td><td bgcolor="WHITE"><b>Minimum</b></td><td bgcolor="WHITE"><b>Maximum</b></td><td bgcolor="WHITE"><b>Moyenne</b></td>
