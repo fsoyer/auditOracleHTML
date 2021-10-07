@@ -20,7 +20,7 @@ For a wider understanding, I'll translate parts from french to english, step by 
     CREATE USER MyAuditUser IDENTIFIED BY "password";
     ALTER USER MyAuditUser DEFAULT TABLESPACE TOOLS;
     ALTER USER MyAuditUser QUOTA UNLIMITED ON TOOLS;
-    GRANT CONNECT, SELECT ANY DICTIONARY, CREATE ANY DIRECTORY TO MyAuditUser;
+    GRANT CONNECT, RESOURCE, SELECT ANY DICTIONARY, CREATE ANY DIRECTORY TO MyAuditUser;
     GRANT EXECUTE ON sys.dbms_system TO MyAuditUser;
 ```
 * The script produces an HTML file called "ORACLE_<SID>_<hostname>_<date>.html

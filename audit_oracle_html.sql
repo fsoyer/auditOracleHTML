@@ -284,15 +284,21 @@ prompt <br>
 -- *************************************** Usage hote
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Usage CPU (valeurs instantan&eacute;es)</b></font></td></tr>
-prompt <tr><td bgcolor="WHITE" colspan=2><b>Statistique</b></td><td bgcolor="WHITE" colspan=2><b>Valeur</b></td>
+prompt <tr><td bgcolor="WHITE"><b>Statistique</b></td><td bgcolor="WHITE" colspan=2><b>Unit&eacute;</b></td><td bgcolor="WHITE"><b>Valeur</b></td>
 
 -- http://www.oracle.com/technetwork/articles/schumacher-analysis-099313.html
-select '<tr><td bgcolor="LIGHTBLUE" colspan=2>', metric_name, '</td><td bgcolor="LIGHTBLUE" align=right colspan=2>', round(value,2), '%</td></tr>'
+select '<tr><td bgcolor="LIGHTBLUE">', metric.metric_name, '</td><td bgcolor="LIGHTBLUE" align=left colspan=2>', metric.METRIC_UNIT, '</td><td bgcolor="', CouleurLimite(round(metric.value/cpu.value,2),80,10,1),'" align=right>', round(metric.value/cpu.value,2), '%</td></tr>'
+from SYS.V_$SYSMETRIC metric, v$osstat cpu
+where METRIC_NAME = 'Database CPU Time Ratio'
+ AND cpu.STAT_NAME = 'NUM_CPUS'
+AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC);
+
+select '<tr><td bgcolor="LIGHTBLUE">', metric_name, '</td><td bgcolor="LIGHTBLUE" align=left colspan=2>', METRIC_UNIT, '</td><td bgcolor="LIGHTBLUE" align=right>', round(value,2), '%</td></tr>'
 from SYS.V_$SYSMETRIC
-where METRIC_NAME IN ('Database CPU Time Ratio', 'Database Wait Time Ratio')
+where METRIC_NAME IN ('Host CPU Utilization (%)','Database Wait Time Ratio')
 AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC)
 Order by 2 asc;
-prompt </td></tr>
+-- prompt </td></tr>
 
 prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Usage CPU d&eacute;taill&eacute;</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE"><b>Statistique</b></td><td bgcolor="WHITE"><b>Minimum</b></td><td bgcolor="WHITE"><b>Maximum</b></td><td bgcolor="WHITE"><b>Moyenne</b></td>
@@ -416,7 +422,7 @@ BEGIN
       dbms_output.put_line(html);
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - ARCHIVES Compression'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from V$PARAMETER where UPPER(name) like '%LOG_ARCHIVE_DEST%' and UPPER(value) like '%COMPRESSION=ENABLE%';
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)' and last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)');
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)') or last_usage_date is null);
       dbms_output.put_line(html);
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Flashback Data Archive (Total Recall)'||CASE WHEN dbafats.counter + dbafat.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from (select count(*) counter from DBA_FLASHBACK_ARCHIVE a left join DBA_FLASHBACK_ARCHIVE_TS b on a.FLASHBACK_ARCHIVE# = b.FLASHBACK_ARCHIVE#) dbafats, (select count(*) counter from DBA_FLASHBACK_ARCHIVE_TABLES) dbafat;
       dbms_output.put_line(html);
@@ -443,7 +449,7 @@ BEGIN
       then
          dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATA MINING</b></td><td bgcolor="#FF0000" align=right><font color=black>DATA MINING USED</font></td></tr>');
       else
-         dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATA MINING</b></td><td bgcolor="#33FF33" align=right><font color=black>DATA MINING INSTALLED, NOT USED</font></td></tr>');
+         dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATA MINING</b></td><td bgcolor="#33FF33" align=right><font color=black>DATA MINING NOT USED</font></td></tr>');
       end if;
       $ELSE
       select '' into html from dual;
@@ -619,7 +625,12 @@ prompt <br>
 
 -- *************************************** Environment variables
 prompt <table border=1 width=100% bgcolor="WHITE">
-prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Environnement</b></font></td></tr>
+prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
+prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
+print info
+prompt " width="20" height="20" alt="Tips..." title="La lecture des variables d'environnement n&eacute;cessite le droit EXECUTE sur le package SYS.DBMS_SYSTEM. Dans le cas contraire, 'Value not readable' est affich&eacute;."></td>
+-- '
+prompt <td align=center><font color="WHITE"><b>Environnement</b></font></td></tr></table></td></tr>
 prompt <tr><td bgcolor="WHITE"><b>Variable</b></td><td bgcolor="WHITE"><b>Valeur</b></td></tr>
 prompt <td bgcolor="LIGHTBLUE">ORACLE_BASE</td>
 declare
@@ -685,8 +696,8 @@ prompt <br>
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="Les principaux param&egrave;tres d&#39;initialisation sont indiqu&eacute;s dans les sections correspondant &agrave; leur champ d&#39;action. Ne sont list&eacute;s ici que les param&egrave;tres qui ne sont pas notifi&eacute;s ailleurs dans ce document."></td>
-prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Autres param&egrave;tres d&#39;initialisation (instance)</b></font></td></tr></table></td></tr>
+prompt " width="20" height="20" alt="Tips..." title="Les principaux param&egrave;tres d&#39;initialisation sont indiqu&eacute;s dans les sections correspondant &agrave; leur champ d&#39;action. Ne sont list&eacute;s ici que les param&egrave;tres qui ont &eacute;t&eacute; modifi&eacute;s par rapport &agrave; leur valeur par d&eacute;faut."></td>
+prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Param&egrave;tres d&#39;initialisation (instance) modifi&eacute;s</b></font></td></tr></table></td></tr>
 prompt <tr><td width=20%><b>Param&egrave;tre</b></td><td width=50%><b>Valeur</b></td>
 
 column audcnt new_value vaudcnt noprint
@@ -695,19 +706,10 @@ column audsze new_value vaudsze noprint
 select decode(sign(bytes/1024/1024 - 1) , -1, '0'||replace(to_char(bytes/1024/1024),',','.'),replace(to_char(bytes/1024/1024),',','.')) as audsze from dba_segments
   where owner = 'SYS' and segment_type='TABLE' and segment_name='AUD$';
 
-select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where name in
-('control_files',
-'open_cursors',
-'processes',
-'compatible',
-'remote_login_passwordfile',
-'session',
-'utl_file_dir',
-'undo_retention',
-'sec_case_sensitive_logon',
-'diagnostic_dest',
-'db_cache_advice')
+select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where isdefault <> 'TRUE'
+-- in ('control_files','open_cursors','processes','compatible','remote_login_passwordfile','session','utl_file_dir','undo_retention','sec_case_sensitive_logon','diagnostic_dest',db_cache_advice')
 union
+-- compute AUD$ table size if revelant
 select '<tr><td bgcolor="LIGHTBLUE">', au.name, '</td>', '<td bgcolor="'|| decode(lower(au.value), 'none', '#33FF33', 'ORANGE') || '">', decode(lower(au.value), 'os', au.value||' ('||aup.value||')', 'xml', au.value||' ('||aup.value||')', 'xml, extended', au.value||' ('||aup.value||')', au.value) || ' (table AUD$ = ' || ~vaudcnt || ' rows, '|| trim(to_char(~vaudsze,'999G999G999G990D00')) ||' Mo)','</td>','</tr>' from v$parameter au, v$parameter aup where au.name='audit_trail' and aup.name='audit_file_dest';
 
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (PARAMETRES INIT)
@@ -1547,7 +1549,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
-prompt " width="20" height="20" alt="Tips..." title="le DB_CACHE d&eacute;orde car il n&#39;a pas assez de place. Ajuster les deux pools supplémentaires DB_KEEP_CACHE_SIZE et DB_RECYCLE_CACHE_SIZE"></td>
+prompt " width="20" height="20" alt="Tips..." title="le DB_CACHE d&eacute;orde car il n&#39;a pas assez de place. Ajuster les deux pools suppl&eacute;mentaires DB_KEEP_CACHE_SIZE et DB_RECYCLE_CACHE_SIZE"></td>
 
 prompt <td align=center><font color="WHITE"><b>Taille totale SGA</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>SGA</b></td><td><b>valeur (Mo)</b></td></tr>
@@ -1703,9 +1705,9 @@ BEGIN
       dbms_output.put_line(v_res1);
     else
       if memory_target=0 then -- if parameter MEMORY_TARGET is not initialized, display SGA stats instead
-        v_sql := 'select ''<tr>''||''<td bgcolor="''||decode(SGA_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''">''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),SGA_SIZE,decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(SGA_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''" align=right>''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),to_char(SGA_SIZE_FACTOR,''990D00''),decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(SGA_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''" align=right>''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),ESTD_DB_TIME,''</td>''||decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</tr>'' from v$sga_target_advice ORDER BY 2';
+        v_sql := 'select ''<tr>''||''<td bgcolor="''||decode(SGA_SIZE_FACTOR,1,''#33FF33'',''LIGHTBLUE'')||''">''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),SGA_SIZE,decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(SGA_SIZE_FACTOR,1,''#33FF33'',''LIGHTBLUE'')||''" align=right>''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),to_char(SGA_SIZE_FACTOR,''990D00''),decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(SGA_SIZE_FACTOR,1,''#33FF33'',''LIGHTBLUE'')||''" align=right>''||decode(SGA_SIZE_FACTOR,1,''<b>'',''''),ESTD_DB_TIME,''</td>''||decode(SGA_SIZE_FACTOR,1,''</b>'','''')||''</tr>'' from v$sga_target_advice ORDER BY 2';
       else
-        v_sql := 'select ''<tr>''||''<td bgcolor="''||decode(MEMORY_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''">''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),MEMORY_SIZE,decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(MEMORY_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''" align=right>''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),to_char(MEMORY_SIZE_FACTOR,''990D00''),decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(MEMORY_SIZE_FACTOR,1,''WHITE'',''LIGHTBLUE'')||''" align=right>''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),ESTD_DB_TIME,''</td>''||decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</tr>'' from v$memory_target_advice ORDER BY 2';
+        v_sql := 'select ''<tr>''||''<td bgcolor="''||decode(MEMORY_SIZE_FACTOR,1,''#33FF33'',''LIGHTBLUE'')||''">''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),MEMORY_SIZE,decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(MEMORY_SIZE_FACTOR,1,''#33FF33'',''LIGHTBLUE'')||''" align=right>''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),to_char(MEMORY_SIZE_FACTOR,''990D00''),decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</td>''||''<td bgcolor="''||decode(MEMORY_SIZE_FACTOR,1,''#33FF33'',''LIGHTBLUE'')||''" align=right>''||decode(MEMORY_SIZE_FACTOR,1,''<b>'',''''),ESTD_DB_TIME,''</td>''||decode(MEMORY_SIZE_FACTOR,1,''</b>'','''')||''</tr>'' from v$memory_target_advice ORDER BY 2';
       end if;
       open v_cur for v_sql;
       loop
@@ -1788,7 +1790,7 @@ from v$librarycache;
 prompt <tr><td bgcolor="#3399CC" colspan=4>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Info..." title="GETHITS est le pourcentage de fois o&ugrave; un pointeur d&#39;objet a &eacute;t&eacute; requis et trouv&eacute; en mémoire. PINHITS est le pourcentage de fois o&ugrave; toutes les m&eacute;tadonn&eacute;es de d&eacute;finition de l&#39;objet ont &eacute;t&eacute; trouv&eacute;es en m&eacute;moire.">
+prompt " width="20" height="20" alt="Info..." title="GETHITS est le pourcentage de fois o&ugrave; un pointeur d&#39;objet a &eacute;t&eacute; requis et trouv&eacute; en m&eacute;moire. PINHITS est le pourcentage de fois o&ugrave; toutes les m&eacute;tadonn&eacute;es de d&eacute;finition de l&#39;objet ont &eacute;t&eacute; trouv&eacute;es en m&eacute;moire.">
 prompt &nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
 prompt " width="20" height="20" alt="Tips..." title="Rapprocher ces statistiques des ratios dictionary et library cache.<br>Augmenter SHARED_POOL_SIZE si les ratios sont inf&eacute;rieurs &agrave; 90%. BODY et INDEX ne sont pas significatifs et peuvent &ecirc;tre ignor&eacute;s."></td>
@@ -1827,7 +1829,7 @@ and ssf.name = 'parse count (failures)';
 prompt <tr><td bgcolor="#3399CC" colspan=4>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Info..." title="Hard parse ration per session. This individual ratios are given by v$sesstat and v$statname views."></td>
+prompt " width="20" height="20" alt="Info..." title="Hard parse ratio per session. This individual ratios are given by v$sesstat and v$statname views."></td>
 prompt <td align=center><font color="WHITE"><b>Hard parse par session (top 10)</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>SID</b></td><td><b>Utilisateur</b></td><td><b>Hard parse count</b></td><td><b>Total parse</b></td></tr>
 select * from (
@@ -2346,7 +2348,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Info..." title="Messages d'erreurs depuis le dernier audit. Si des messages sont affich&eacute;s, voir le d&eacute;tail dans le fichier alert<SID>.log, ou la table ALERT_LOG (r&eacute;sum&eacute;), ou la table externe ALERT_LOG_DISK (qui contient tout l'alert.log). En gras sont indiqu&eacute;es les lignes regroupant plusieurs messages cons&eacute;cutifs un m&ecirc;me jour. Le titre ci-contre est affich&eacute; en orange si la taille du fichier dépasse 100Mo."></td>
+prompt " width="20" height="20" alt="Info..." title="Messages d'erreurs depuis le dernier audit. Si des messages sont affich&eacute;s, voir le d&eacute;tail dans le fichier alert<SID>.log, ou la table ALERT_LOG (r&eacute;sum&eacute;), ou la table externe ALERT_LOG_DISK (qui contient tout l'alert.log). En gras sont indiqu&eacute;es les lignes regroupant plusieurs messages cons&eacute;cutifs un m&ecirc;me jour. Le titre ci-contre est affich&eacute; en orange si la taille du fichier d&eacute;passe 100Mo."></td>
 prompt <td align=center
 select decode(sign(~sbsize/1024/1024 - 100), -1, '', ' bgcolor=ORANGE') from dual;
 prompt ><font color="WHITE"><b>~sbdump</b><b>alert_~_db..log (
