@@ -281,67 +281,6 @@ select '<td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_CURRENT,
 prompt </table>
 prompt <br>
 
--- *************************************** Usage hote
-prompt <table border=1 width=100% bgcolor="WHITE">
-prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Usage CPU (valeurs instantan&eacute;es)</b></font></td></tr>
-prompt <tr><td bgcolor="WHITE"><b>Statistique</b></td><td bgcolor="WHITE" colspan=2><b>Unit&eacute;</b></td><td bgcolor="WHITE"><b>Valeur</b></td>
-
--- http://www.oracle.com/technetwork/articles/schumacher-analysis-099313.html
-select '<tr><td bgcolor="LIGHTBLUE">', metric.metric_name, '</td><td bgcolor="LIGHTBLUE" align=left colspan=2>', metric.METRIC_UNIT, '</td><td bgcolor="', CouleurLimite(round(metric.value/cpu.value,2),80,10,1),'" align=right>', round(metric.value/cpu.value,2), '%</td></tr>'
-from SYS.V_$SYSMETRIC metric, v$osstat cpu
-where METRIC_NAME = 'Database CPU Time Ratio'
- AND cpu.STAT_NAME = 'NUM_CPUS'
-AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC);
-
-select '<tr><td bgcolor="LIGHTBLUE">', metric_name, '</td><td bgcolor="LIGHTBLUE" align=left colspan=2>', METRIC_UNIT, '</td><td bgcolor="', CouleurLimite(round(value,2),30,10,1),'" align=right>', round(value,2), '%</td></tr>'
-from SYS.V_$SYSMETRIC
-where METRIC_NAME = 'Database Wait Time Ratio'
-AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC);
-
-select '<tr><td bgcolor="LIGHTBLUE">', metric_name, '</td><td bgcolor="LIGHTBLUE" align=left colspan=2>', METRIC_UNIT, '</td><td bgcolor="', CouleurLimite(round(value,2),80,10,1),'" align=right>', round(value,2), '%</td></tr>'
-from SYS.V_$SYSMETRIC
-where METRIC_NAME = 'Host CPU Utilization (%)'
-AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC);
-
-prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Usage CPU d&eacute;taill&eacute;</b></font></td></tr>
-prompt <tr><td bgcolor="WHITE"><b>Statistique</b></td><td bgcolor="WHITE"><b>Minimum</b></td><td bgcolor="WHITE"><b>Maximum</b></td><td bgcolor="WHITE"><b>Moyenne</b></td>
-
-select CASE METRIC_NAME
- WHEN 'SQL Service Response Time' then '<tr><td bgcolor="LIGHTBLUE">SQL Service Response Time (secs)</td>'
- WHEN 'Response Time Per Txn' then '<tr><td bgcolor="LIGHTBLUE">Response Time Per Txn (secs)</td>'
-ELSE '<tr><td bgcolor="LIGHTBLUE">'||METRIC_NAME||'</td>'
-END METRIC_NAME,
-CASE METRIC_NAME
- WHEN 'SQL Service Response Time' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MINVAL / 100),2),'999G990D00')||'</td>'
- WHEN 'Response Time Per Txn' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MINVAL / 100),2),'999G990D00')||'</td>'
-ELSE '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MINVAL / 100),2),'999G990D00')||'</td>'
-END MININUM,
-CASE METRIC_NAME
- WHEN 'SQL Service Response Time' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MAXVAL / 100),2),'999G990D00')||'</td>'
- WHEN 'Response Time Per Txn' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MAXVAL / 100),2),'999G990D00')||'</td>'
-ELSE '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MAXVAL / 100),2),'999G990D00')||'</td>'
-END MAXIMUM,
-CASE METRIC_NAME
- WHEN 'SQL Service Response Time' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((AVERAGE / 100),2),'999G990D00')||'</td>'
- WHEN 'Response Time Per Txn' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((AVERAGE / 100),2),'999G990D00')||'</td>'
-ELSE '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((AVERAGE / 100),2),'999G990D00')||'</td></tr>'
-END AVERAGE
- from SYS.V_$SYSMETRIC_SUMMARY 
- where METRIC_NAME in ('CPU Usage Per Sec',
- 'CPU Usage Per Txn',
- 'Database CPU Time Ratio',
- 'Database Wait Time Ratio',
- 'Executions Per Sec',
- 'Executions Per Txn',
- 'Response Time Per Txn',
- 'SQL Service Response Time',
- 'User Transaction Per Sec')
- ORDER BY 1;
-
-prompt </td></tr>
-prompt </table>
-prompt <br>
-
 -- *************************************** Versions
 delete from ~tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='VERS';
 prompt <table border=1 width=100% bgcolor="WHITE">
@@ -911,6 +850,71 @@ end;
 prompt </td></tr></table>
 prompt <br>
 
+-- *************************************** SECTION USAGE PROCESSEURS
+prompt <hr>
+prompt <div align=center><b><font color="WHITE">SECTION CPU</font></b></div>
+prompt <hr>
+
+-- *************************************** Usage CPU hôte
+prompt <table border=1 width=100% bgcolor="WHITE">
+prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Usage CPU (valeurs instantan&eacute;es)</b></font></td></tr>
+prompt <tr><td bgcolor="WHITE"><b>Statistique</b></td><td bgcolor="WHITE" colspan=2><b>Unit&eacute;</b></td><td bgcolor="WHITE"><b>Valeur</b></td>
+
+-- http://www.oracle.com/technetwork/articles/schumacher-analysis-099313.html
+select '<tr><td bgcolor="LIGHTBLUE">', metric.metric_name, '</td><td bgcolor="LIGHTBLUE" align=left colspan=2>', metric.METRIC_UNIT, '</td><td bgcolor="', CouleurLimite(round(metric.value/cpu.value,2),80,10,1),'" align=right>', to_char(round(metric.value/cpu.value,2),'9990D00'), '%</td></tr>'
+from SYS.V_$SYSMETRIC metric, v$osstat cpu
+where METRIC_NAME = 'Database CPU Time Ratio'
+ AND cpu.STAT_NAME = 'NUM_CPUS'
+AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC);
+
+select '<tr><td bgcolor="LIGHTBLUE">', metric_name, '</td><td bgcolor="LIGHTBLUE" align=left colspan=2>', METRIC_UNIT, '</td><td bgcolor="', CouleurLimite(round(value,2),30,10,1),'" align=right>', to_char(round(value,2),'9990D00'), '%</td></tr>'
+from SYS.V_$SYSMETRIC
+where METRIC_NAME = 'Database Wait Time Ratio'
+AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC);
+
+select '<tr><td bgcolor="LIGHTBLUE">', metric_name, '</td><td bgcolor="LIGHTBLUE" align=left colspan=2>', METRIC_UNIT, '</td><td bgcolor="', CouleurLimite(round(value,2),80,10,1),'" align=right>', to_char(round(value,2),'9990D00'), '%</td></tr>'
+from SYS.V_$SYSMETRIC
+where METRIC_NAME = 'Host CPU Utilization (%)'
+AND INTSIZE_CSEC = (select max(INTSIZE_CSEC) from SYS.V_$SYSMETRIC);
+
+prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Usage CPU d&eacute;taill&eacute;</b></font></td></tr>
+prompt <tr><td bgcolor="WHITE"><b>Statistique</b></td><td bgcolor="WHITE"><b>Minimum</b></td><td bgcolor="WHITE"><b>Maximum</b></td><td bgcolor="WHITE"><b>Moyenne</b></td>
+
+select CASE METRIC_NAME
+ WHEN 'SQL Service Response Time' then '<tr><td bgcolor="LIGHTBLUE">SQL Service Response Time (secs)</td>'
+ WHEN 'Response Time Per Txn' then '<tr><td bgcolor="LIGHTBLUE">Response Time Per Txn (secs)</td>'
+ELSE '<tr><td bgcolor="LIGHTBLUE">'||METRIC_NAME||'</td>'
+END METRIC_NAME,
+CASE METRIC_NAME
+ WHEN 'SQL Service Response Time' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MINVAL / 100),2),'999G990D00')||'</td>'
+ WHEN 'Response Time Per Txn' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MINVAL / 100),2),'999G990D00')||'</td>'
+ELSE '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MINVAL / 100),2),'999G990D00')||'</td>'
+END MININUM,
+CASE METRIC_NAME
+ WHEN 'SQL Service Response Time' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MAXVAL / 100),2),'999G990D00')||'</td>'
+ WHEN 'Response Time Per Txn' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MAXVAL / 100),2),'999G990D00')||'</td>'
+ELSE '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((MAXVAL / 100),2),'999G990D00')||'</td>'
+END MAXIMUM,
+CASE METRIC_NAME
+ WHEN 'SQL Service Response Time' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((AVERAGE / 100),2),'999G990D00')||'</td>'
+ WHEN 'Response Time Per Txn' then '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((AVERAGE / 100),2),'999G990D00')||'</td>'
+ELSE '<td bgcolor="LIGHTBLUE" align=right>'||to_char(ROUND((AVERAGE / 100),2),'999G990D00')||'</td></tr>'
+END AVERAGE
+ from SYS.V_$SYSMETRIC_SUMMARY 
+ where METRIC_NAME in ('CPU Usage Per Sec',
+ 'CPU Usage Per Txn',
+ 'Database CPU Time Ratio',
+ 'Database Wait Time Ratio',
+ 'Executions Per Sec',
+ 'Executions Per Txn',
+ 'Response Time Per Txn',
+ 'SQL Service Response Time',
+ 'User Transaction Per Sec')
+ ORDER BY 1;
+
+prompt </td></tr>
+prompt </table>
+prompt <br>
 
 -- *************************************** SECTION STOCKAGE
 prompt <hr>
