@@ -157,7 +157,7 @@ prompt <hr>
 
 -- *************************************** audit historic
 prompt <table border=1 width=100% bgcolor="WHITE">
-prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Historique d&#39;audits</b></font></td></tr>
+prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>Historique d&rsquo;audits</b></font></td></tr>
 -- Creation table HISTAUDIT si necessaire
 prompt <tr><td width=20%><b>Table historique</b></td>
 
@@ -331,9 +331,8 @@ prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>O
 
 SELECT DISTINCT '<tr><td bgcolor="LIGHTBLUE" colspan=5>',PARAMETER,'</td>','</tr>' FROM V$OPTION where VALUE = 'TRUE' order by parameter;
 
-prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Fonctionnalit&eacute;s autoris&eacute;es (&agrave; v&eacute;rifier selon l'&eacute;dition)</b></font></td></tr>
-prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td bgcolor="WHITE" align=center><b>activ&eacute;e (derni&egrave;re date d&#39;usage)</b></font></td></tr>
--- '
+prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Fonctionnalit&eacute;s autoris&eacute;es (&agrave; v&eacute;rifier selon l&rsquo;&eacute;dition)</b></font></td></tr>
+prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td bgcolor="WHITE" align=center><b>Active (derni&egrave;re date d&rsquo;usage)</b></font></td></tr>
 
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>',a.name,'</td><td bgcolor="LIGHTBLUE" align=right>',a.CURRENTLY_USED || ' (' || decode(a.last_usage_date,NULL,'NONE',to_char(a.last_usage_date)) || ')</td></tr>' from dba_feature_usage_statistics a where a.detected_usages > 0 and a.name not in ('Oracle Utility Datapump (Export)','Data Guard') and a.last_usage_date = (select max(last_usage_date) from dba_feature_usage_statistics where name = a.name) order by a.name;
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','Automatic Workload Repository','</td><td bgcolor="LIGHTBLUE" align=right><font color=black>', to_char(display_value) || '</font></td></tr>' from v$parameter where name = 'Automatic Workload Repository';
@@ -570,8 +569,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="La lecture des variables d'environnement n&eacute;cessite le droit EXECUTE sur le package SYS.DBMS_SYSTEM. Dans le cas contraire, 'Value not readable' est affich&eacute;."></td>
--- '
+prompt " width="20" height="20" alt="Tips..." title="La lecture des variables d&rsquo;environnement n&eacute;cessite le droit EXECUTE sur le package SYS.DBMS_SYSTEM. Dans le cas contraire, &rsquo;Value not readable&rsquo; est affich&eacute;."></td>
 prompt <td align=center><font color="WHITE"><b>Environnement</b></font></td></tr></table></td></tr>
 prompt <tr><td bgcolor="WHITE"><b>Variable</b></td><td bgcolor="WHITE"><b>Valeur</b></td></tr>
 prompt <td bgcolor="LIGHTBLUE">ORACLE_BASE</td>
@@ -613,7 +611,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="Si l'instance est lanc&eacute;e avec un fichier SPFILE le chemin de celui-ci est affich&eacute;. Dans le cas contraire on affiche seulement 'PFILE' car le chemin du fichier texte init.ora n'est pas disponible dans les tables syst&egrave;me."></td>
+prompt " width="20" height="20" alt="Tips..." title="Si l&rsquo;instance est lanc&eacute;e avec un fichier SPFILE le chemin de celui-ci est affich&eacute;. Dans le cas contraire on affiche seulement &rsquo;PFILE&rsquo; car le chemin du fichier texte init.ora n&rsquo;est pas disponible dans les tables syst&egrave;me."></td>
 
 prompt <td align=center><font color="WHITE"><b>Initialisation : pfile (init.ora) ou spfile ?</b></font></td></tr></table></td></tr>
 SELECT decode(value,'','<td bgcolor="ORANGE" width=15%>PFILE</td>','<td bgcolor="#33FF33" width=15%>SPFILE</td>'), decode(value,'','<td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td></tr>','<td>'||value||'</td></tr>') FROM v$parameter WHERE name like 'spfile' ;
@@ -638,8 +636,8 @@ prompt <br>
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2><table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="Les principaux param&egrave;tres d&#39;initialisation sont indiqu&eacute;s dans les sections correspondant &agrave; leur champ d&#39;action. Ne sont list&eacute;s ici que les param&egrave;tres qui ont &eacute;t&eacute; modifi&eacute;s par rapport &agrave; leur valeur par d&eacute;faut."></td>
-prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Param&egrave;tres d&#39;initialisation (instance) modifi&eacute;s</b></font></td></tr></table></td></tr>
+prompt " width="20" height="20" alt="Tips..." title="Les principaux param&egrave;tres d&rsquo;initialisation sont indiqu&eacute;s dans les sections correspondant &agrave; leur champ d&rsquo;action. Ne sont list&eacute;s ici que les param&egrave;tres qui ont &eacute;t&eacute; modifi&eacute;s par rapport &agrave; leur valeur par d&eacute;faut."></td>
+prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Param&egrave;tres d&rsquo;initialisation (instance) modifi&eacute;s</b></font></td></tr></table></td></tr>
 prompt <tr><td width=20%><b>Param&egrave;tre</b></td><td width=50%><b>Valeur</b></td>
 
 column audcnt new_value vaudcnt noprint
@@ -787,21 +785,29 @@ prompt <tr><td width=20%><b>Archive log destination</b></td>
 DECLARE
 arch_mode number := 0;
 cnt_dest number := 0;
+fra_dest number := 0;
 BEGIN
    select decode(log_mode,'ARCHIVELOG',1,0) into arch_mode from v$database;
+   select count(name) into fra_dest from v$parameter where value is not null and name like 'db_recovery_file_dest';
    select count(name) into cnt_dest from v$parameter
    where (name like 'log_archive_dest_%' or name = 'log_archive_dest') and name not like '%state%' and value is not NULL;
    if arch_mode=1 AND cnt_dest>0 then
       dbms_output.put_line('<td bgcolor="LIGHTBLUE">');
    end if;
    if arch_mode=1 AND cnt_dest=0 then
-      dbms_output.put_line('<td bgcolor="ORANGE">Les ARCHIVE LOGS sont dans la flash_recovery_area ! A d&eacute;placer !');
+      if fra_dest=0 then
+         dbms_output.put_line('<td bgcolor="#FF0000">(db_recovery_file_dest=NULL) ');
+      else
+         dbms_output.put_line('<td bgcolor="ORANGE">');
+      end if;
+      dbms_output.put_line('Les ARCHIVE LOGS sont dans la flash_recovery_area !');
    end if;
    if arch_mode=0 then
       dbms_output.put_line('<td bgcolor="LIGHTGREY">');
    end if;
 end;
 /
+
 select distinct decode(d.log_mode,'ARCHIVELOG',p.name||' = '||p.value||'<br/>', '') from v$database d,v$parameter p where (p.name like 'log_archive_dest_%' or p.name = 'log_archive_dest') and p.name not like '%state%' and p.value is not NULL;
 prompt </td></tr>
 
@@ -828,7 +834,7 @@ print info
 prompt " width="20" height="20" alt="Info..." title="En cas de fort remplissage de la FRA, v&eacute;rifier le contenu par : SELECT * FROM V$RECOVERY_AREA_USAGE;">
 prompt &nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
-prompt " width="20" height="20" alt="Tips..." title="Attention : supprimer sur disque les archives de la FRA ne suffit pas &agrave; r&eacute;cup&eacute;rer l'espace. La FRA est g&eacute;r&eacute;e logiquement. Il est n&eacute;cessaire d'ex&eacute;cuter ' CROSSCHECK ARCHIVELOG ALL; ' et ' DELETE EXPIRED ARCHIVELOG ALL; ' sous RMAN pour qu'Oracle lib&egrave;re l'espace."></td>
+prompt " width="20" height="20" alt="Tips..." title="Attention : supprimer sur disque les archives de la FRA ne suffit pas &agrave; r&eacute;cup&eacute;rer l&rsquo;espace. La FRA est g&eacute;r&eacute;e logiquement. Il est n&eacute;cessaire d&rsquo;ex&eacute;cuter &rsquo;CROSSCHECK ARCHIVELOG ALL;&rsquo; et &rsquo;DELETE EXPIRED ARCHIVELOG ALL;&rsquo; sous RMAN pour qu&rsquo;Oracle lib&egrave;re l&rsquo;espace."></td>
 prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Informations Flash Recovery Area</b></font></td></tr></table></td></tr>
 prompt <tr><td  bgcolor="WHITE" width=20%><b>Chemin</b></td><td><b>Espace totale</b></td></td><td><b>Espace utilis&eacute;</b></td></tr>
 
@@ -1315,7 +1321,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" colspan=3>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="ATTENTION : l&#39;historique des logs peut &ecirc;tre supprim&eacute; au fur et &agrave; mesure : ces statistiques risquent de ne pas &ecirc;tre viables."></td>
+prompt " width="20" height="20" alt="Tips..." title="ATTENTION : l&rsquo;historique des logs peut &ecirc;tre supprim&eacute; au fur et &agrave; mesure : ces statistiques risquent de ne pas &ecirc;tre viables."></td>
 prompt <td align=center><font color="WHITE"><b>Statistiques switchs REDO LOGS</b></font></td></tr></table></td></tr>
 
 prompt <tr><td width=15%><b>Statistique</b></td><td width=15%><b>Date</b></td><td width=15%><b>Valeur</b></td></tr>
@@ -1393,7 +1399,7 @@ prompt </table><br>
 
 -- *************************************** CONFLITS D'ACCES
 prompt <hr>
-prompt <div align=center><b><font color="WHITE" size=2>STATISTIQUES D&#39;ACCES DISQUE</font></b></div>
+prompt <div align=center><b><font color="WHITE" size=2>STATISTIQUES D&rsquo;ACCES DISQUE</font></b></div>
 prompt <hr>
 
 -- *************************************** contentions de basculement
@@ -1401,10 +1407,10 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" colspan=4>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="&#39;Checkpoint not complete&#39; : ce message apparait si le check point pr&eacute;c&eacute;dent n&#39;est pas fini lors d&#39;un CPKT ou d&#39;un switch (qui occasionne lui-m&ecirc;me un ckpt). Augmenter la taille des fichiers redo logs, ou leur nombre si &ccedil;a ne suffit pas.">
+prompt " width="20" height="20" alt="Tips..." title="&rsquo;Checkpoint not complete&rsquo; : ce message apparait si le check point pr&eacute;c&eacute;dent n&rsquo;est pas fini lors d&rsquo;un CPKT ou d&rsquo;un switch (qui occasionne lui-m&ecirc;me un ckpt). Augmenter la taille des fichiers redo logs, ou leur nombre si &ccedil;a ne suffit pas.">
 prompt &nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
-prompt " width="20" height="20" alt="Info..." title="voir messages 'Checkpoint not complete' dans le fichier alert<SID>.log"></td>
+prompt " width="20" height="20" alt="Info..." title="voir messages &rsquo;Checkpoint not complete&rsquo; dans le fichier alert<SID>.log"></td>
 prompt <td align=center><font color="WHITE"><b>Contentions de basculement redo logs</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
 prompt <tr><td width=15%><b>Nom</b></td><td width=15%><b>Ev&egrave;nement</b></td><td width=15%><b>Wait (en secondes)</b></td><td width=15%><b>Etat</b></td></tr>
 
@@ -1433,7 +1439,7 @@ prompt " width="20" height="20" alt="Tips..." title="ATTENTION : ces valeurs son
 prompt &nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
 prompt " width="20" height="20" alt="Tips..." title="Si data block > 0 (trop de blocs modifi&eacute;s dans le buffer cache) augmenter le nombre de processus DBWR. Si segment header ou free list > 0 (multiplier les freelists en re-cr&eacute;ant la table avec nouveau param&egrave;tre). Si un des param&egrave;tres UNDO est sup&eacute;rieur &agrave; 1% ou 2% besoin de plus de rollback segments."></td>
-prompt <td align=center><font color="WHITE"><b>Conflits d&#39;acc&egrave;s disque</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
+prompt <td align=center><font color="WHITE"><b>Conflits d&rsquo;acc&egrave;s disque</b></font></td><td width=10%>&nbsp;</td></tr></table></td></tr>
 prompt <tr><td width=15%><b>Classe</b></td><td width=15%><b>Nombre</b></td></tr>
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',class,'</td>','<td bgcolor="',CouleurLimite(count,10000000,9990000,1),'" align=right>',count,'</td>','</tr>' from v$waitstat;
@@ -1447,7 +1453,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
-prompt " width="20" height="20" alt="Tips..." title="La d&eacute;tection des FULL SCANS est faite par le rapport entre les demandes de lecture et les chargements des donn&eacute;es du disque (les blocs). Un ratio > 50% signifie qu&#39;un petit nombre de demandes chargent un grand nombre de blocs, ce qui indique que les tables sont lus en entier trop fr&eacute;quemment."></td>
+prompt " width="20" height="20" alt="Tips..." title="La d&eacute;tection des FULL SCANS est faite par le rapport entre les demandes de lecture et les chargements des donn&eacute;es du disque (les blocs). Un ratio > 50% signifie qu&rsquo;un petit nombre de demandes chargent un grand nombre de blocs, ce qui indique que les tables sont lus en entier trop fr&eacute;quemment."></td>
 
 prompt <td align=center><font color="WHITE"><b>D&eacute;tection des FULL SCANs</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Read requests</b></td><td><b>Blocks read</b></td><td><img src="data:image/gif;base64,
@@ -1504,7 +1510,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
-prompt " width="20" height="20" alt="Tips..." title="les jobs 'GATHER_STATS_JOB' et 'MGMT_STATS_CONFIG_JOB' (10g), ou seulement 'MGMT_STATS_CONFIG_JOB' (11g) indiquent si les mises &agrave; jour des statistiques sont activ&eacute;es ('SCHEDULED')"></td>
+prompt " width="20" height="20" alt="Tips..." title="les jobs &rsquo;GATHER_STATS_JOB&rsquo; et &rsquo;MGMT_STATS_CONFIG_JOB&rsquo; (10g), ou seulement &rsquo;MGMT_STATS_CONFIG_JOB&rsquo; (11g) indiquent si les mises &agrave; jour des statistiques sont activ&eacute;es (&rsquo;SCHEDULED&rsquo;)"></td>
 
 -- Pourquoi certains jobs sont "SCHEDULED" mais sans dates de lancement ??
 
@@ -1556,7 +1562,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=2>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
-prompt " width="20" height="20" alt="Tips..." title="le DB_CACHE d&eacute;orde car il n&#39;a pas assez de place. Ajuster les deux pools suppl&eacute;mentaires DB_KEEP_CACHE_SIZE et DB_RECYCLE_CACHE_SIZE"></td>
+prompt " width="20" height="20" alt="Tips..." title="Si KGH NO ACCESS est sup&eacute;rieur &agrave; 0, cela indique des erreurs ASMM, donc probablement un manque de m&eacute;moire. Si sga_max_size ou sga_target indiquent une valeur alors qu&rsquo;ils devraient &ecirc;tre &agrave; 0 (param&egrave;tres MEMORY_* actifs), il s&rsquo;agit de la valeur courante calcul&eacute;e par Oracle : sga_max_size (ou sga_target) + pga_aggregate_target = memory_max_target (ou memory_target)."></td>
 
 prompt <td align=center><font color="WHITE"><b>Taille totale SGA</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>SGA</b></td><td><b>valeur (Mo)</b></td></tr>
@@ -1758,7 +1764,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" colspan=5>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Info..." title="GETS column represents the total number of times a process or Oracle asked for the item named in the column PARAMETER. GETMISSES column represents the number of times a request for dictionary information couldn&#39;t find that information in the dictionary cache and instead had to go to the SYSTEM tablespace to retrieve the information. SCANS column is the number of scan requests. SCANMISSES column is the times a scan failed to find the data in the cache.">
+prompt " width="20" height="20" alt="Info..." title="GETS column represents the total number of times a process or Oracle asked for the item named in the column PARAMETER. GETMISSES column represents the number of times a request for dictionary information couldn&rsquo;t find that information in the dictionary cache and instead had to go to the SYSTEM tablespace to retrieve the information. SCANS column is the number of scan requests. SCANMISSES column is the times a scan failed to find the data in the cache.">
 prompt &nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
 prompt " width="20" height="20" alt="Tips..." title="Augmenter SHARED_POOL_SIZE si les ratios (Library ET Dictionary cache) sont inf&eacute;rieur &agrave; 85%."></td>
@@ -1797,7 +1803,7 @@ from v$librarycache;
 prompt <tr><td bgcolor="#3399CC" colspan=4>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Info..." title="GETHITS est le pourcentage de fois o&ugrave; un pointeur d&#39;objet a &eacute;t&eacute; requis et trouv&eacute; en m&eacute;moire. PINHITS est le pourcentage de fois o&ugrave; toutes les m&eacute;tadonn&eacute;es de d&eacute;finition de l&#39;objet ont &eacute;t&eacute; trouv&eacute;es en m&eacute;moire.">
+prompt " width="20" height="20" alt="Info..." title="GETHITS est le pourcentage de fois o&ugrave; un pointeur d&rsquo;objet a &eacute;t&eacute; requis et trouv&eacute; en m&eacute;moire. PINHITS est le pourcentage de fois o&ugrave; toutes les m&eacute;tadonn&eacute;es de d&eacute;finition de l&rsquo;objet ont &eacute;t&eacute; trouv&eacute;es en m&eacute;moire.">
 prompt &nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
 prompt " width="20" height="20" alt="Tips..." title="Rapprocher ces statistiques des ratios dictionary et library cache.<br>Augmenter SHARED_POOL_SIZE si les ratios sont inf&eacute;rieurs &agrave; 90%. BODY et INDEX ne sont pas significatifs et peuvent &ecirc;tre ignor&eacute;s."></td>
@@ -2081,7 +2087,7 @@ and s.username is not null
 and n.name='session pga memory'
 group by username;
 
-select '<tr><td width=15% colspan=2><b>Nombre d&#39;utilisateurs au moment de l&#39;audit</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE">',count(*),'</td>','</tr>'
+select '<tr><td width=15% colspan=2><b>Nombre d&rsquo;utilisateurs au moment de l&rsquo;audit</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE">',count(*),'</td>','</tr>'
 from v$statname n, v$sesstat t, v$session s
 where s.sid=t.sid
 and n.statistic#=t.statistic#
@@ -2089,7 +2095,7 @@ and s.type='USER'
 and s.username is not null
 and n.name='session pga memory';
 
-select '<tr><td width=15% colspan=2><b>Nombre max. d&#39;utilisateurs simultan&eacute;s (highwater) / Nombre max. autoris&eacute;s</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE"><b>',sessions_highwater,'/',decode(SESSIONS_MAX,0,'-',SESSIONS_MAX),'</b></td>','</tr>'
+select '<tr><td width=15% colspan=2><b>Nombre max. d&rsquo;utilisateurs simultan&eacute;s (highwater) / Nombre max. autoris&eacute;s</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE"><b>',sessions_highwater,'/',decode(SESSIONS_MAX,0,'-',SESSIONS_MAX),'</b></td>','</tr>'
 from v$license;
 
 select '<tr><td width=15% colspan=2><b>Total UGA (Mo)</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE">',to_char(round(sum(value)/(1024*1024),2),'99G999G990D00'),'</td>','</tr>'
@@ -2283,6 +2289,7 @@ begin
        and text not like 'Completed:%'
        and text not like 'ORA-INFO::%'
        and text not like 'KGL object name :SELECT%'
+       and text not like 'LGWR slave%'
   )
   loop
 
@@ -2612,7 +2619,7 @@ prompt </table><br>
 prompt <!-- Tables et index dans le meme tablespace -->
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>Indexes dans le m&ecirc;me tablespace que leur table</b></font></td></tr>
-prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=15%><b>Tablespace</b></td><td width=15%><b>Nombre d&#39;objets</b></td></tr>
+prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=15%><b>Tablespace</b></td><td width=15%><b>Nombre d&rsquo;objets</b></td></tr>
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',a.owner,'</td>', '<td bgcolor="LIGHTBLUE">',a.tablespace_name,'</td>', '<td bgcolor="LIGHTBLUE">',count(a.table_name),'</td>','</tr>'
 from dba_tables a, dba_indexes b
@@ -2681,7 +2688,7 @@ prompt </table><br>
 -- Nombres d'objets par schemas (hors schemas systemes)
 -- ***************************************************
 prompt <table border=1 width=100% bgcolor="WHITE">
-prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Nombre d&#39;objets par sch&eacute;ma (non syst&egrave;mes)</b></font></td></tr>
+prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Nombre d&rsquo;objets par sch&eacute;ma (non syst&egrave;mes)</b></font></td></tr>
 prompt <tr><td><b>Utilisateur</b></td><td><b>Total</b></td><td><b>Tables</b></td><td><b>Indexes</b></td><td><b>Autres</b></td></tr>
 prompt 
 
