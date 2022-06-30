@@ -39,7 +39,11 @@ ALTER SESSION SET NLS_DATE_FORMAT = 'DD/MM/YYYY';
 ALTER SESSION SET NLS_DATE_LANGUAGE = 'FRENCH';
 
 -- ************************************** CONSTANTS
--- param 1 = tablespace for audit table, param 2 = audit table name
+-- param 1 = tablespace for audit table, param 2 = audit table name, param 3 = html file prefix
+-- IMPORTANT NOTICE :
+-- The first parameter can be added alone on command line,
+-- but the second parameter requires the first to be added before (or the script will take it as first parameter)
+--    and the third requires the two others to be added before for the same reason
 -- Force here a default value if no cmd line parameter present
 column 1 new_value 1 noprint
 select '' "1" from dual where rownum = 0;
@@ -48,7 +52,10 @@ define tbstools = ~1 TOOLS
 column 2 new_value 2 noprint
 select '' "2" from dual where rownum = 0;
 define tblhist = ~2 HISTAUDIT
-define logfile = ORACLE
+-- Force default value if no cmd line parameter
+column 3 new_value 3 noprint
+select '' "3" from dual where rownum = 0;
+define logfile = ~3 ORACLE
 define envfile = env
 
 -- *************************************** Creation de fonctions
