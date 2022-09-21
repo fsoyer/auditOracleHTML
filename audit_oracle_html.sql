@@ -37,6 +37,7 @@ set define "~"
 ALTER SESSION SET NLS_NUMERIC_CHARACTERS = ", ";
 ALTER SESSION SET NLS_DATE_FORMAT = 'DD/MM/YYYY';
 ALTER SESSION SET NLS_DATE_LANGUAGE = 'FRENCH';
+ALTER SESSION SET RECYCLEBIN = OFF;
 
 -- ************************************** CONSTANTS
 -- param 1 = tablespace for audit table, param 2 = audit table name, param 3 = html file prefix
@@ -665,11 +666,16 @@ insert into ~tblhist (
 select sysdate, 'INIT', substr(name,1,30), 0, 0, value
 from v$parameter
   where ISDEFAULT='FALSE'
-  and name not like '%nls%');
+  and name not in ('%nls%','recyclebin'));
 -- NLS session parameters change in instance according to client config. We keep only database parameters.
 insert into ~tblhist (
 select sysdate, 'INIT', substr(parameter,1,30), 0, 0, value
 from nls_database_parameters);
+
+insert into ~tblhist (
+select sysdate, 'INIT', substr(name,1,30), 0, 0, value
+from V$SYSTEM_PARAMETER
+  where NAME='recyclebin');
 
 -- *************************************** Modifies lors du dernier audit ?
 prompt <tr>
@@ -781,7 +787,8 @@ select decode(value, NULL, 'DEDICATED', 0, 'DEDICATED', 'SHARED:'||value) from v
 prompt </td></tr>
 prompt <td><b>Recycle bin</b></td>
 prompt <td bgcolor="LIGHTBLUE">
-select value from v$parameter where name = 'recyclebin';
+ -- changed recyclebin to OFF for this session, so need to be read from system.
+select value from V$SYSTEM_PARAMETER where name = 'recyclebin';
 prompt </td></tr>
 -- Archive log mode
 prompt <tr><td width=20%><b>Archive log mode</b></td>
@@ -1006,53 +1013,6 @@ prompt <hr>
 prompt <div align=center><b><font color="WHITE" size=2>TABLESPACES</font></b></div>
 prompt <hr>
 
--- *************************************** Liste datafiles
-
-prompt <table border=1 width=100% bgcolor="WHITE">
-prompt <tr><td bgcolor="#3399CC" align=center colspan=6>
-prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
-print info
-prompt " width="20" height="20" alt="Tips..." title="Les nouveaux tablespaces et fichiers cr&eacute;&eacute;s depuis le dernier audit apparaissent en orange"></td>
-prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Liste des datafiles par tablespace</b></font></td></tr></table></td></tr>
-prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Taille (Mo)</b></td><td><b>Autoext.</b></td><td><b>Next</b></td><td><b>MaxSize</b></td></tr>
-
-WITH list_tbs AS (
-select distinct OBJ_NAME,TYPE_OBJ from ~tblhist
-where type_obj in ('TBS','FIL')
-and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
-                            where to_date(date_aud) < trunc(sysdate))
-)
-select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') and dt.contents NOT IN ('UNDO') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END||'</td>' as tbs,
- '<td bgcolor="'||CASE WHEN df.FILE_NAME NOT IN (select list_tbs.obj_name from list_tbs where type_obj='FIL') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||df.FILE_NAME||'</td>' as fname,
- '<td bgcolor="'||decode (CONTENTS,'UNDO','#33FF33',decode(autoextensible,'NO','#33FF33',CouleurLimite(sum(df.blocks)*~dbloc,(sum(df.maxbytes)-(sum(df.maxbytes)*0.20)),(sum(df.maxbytes)-(sum(df.maxbytes)*0.20))*0.10,1)))||'" align=right>'||decode(round(sum(df.bytes)/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.bytes)/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
- decode(autoextensible,'NO','<td bgcolor="#FF9900" align=right>OFF</td>','<td bgcolor="#33FF33" align=right>ON</td>') as autoext,
- '<td bgcolor="LIGHTBLUE" align=right>'||to_char(round(sum(increment_by)*~dbloc/(1024*1024),2),'99G999G990')||'</td>' as nsize,
--- maxbytes always in bytes even if bigfile ?
- '<td bgcolor="LIGHTBLUE" align=right>'||to_char(decode(BIGFILE,'YES',round(sum(df.maxbytes)/(1024*1024),2),round(sum(df.maxbytes)/(1024*1024),2)),'99G999G990')||'</td>' as msize, '</tr>'
-from DBA_DATA_FILES df, DBA_TABLESPACES dt
-where df.tablespace_name=dt.tablespace_name(+)
-group by df.tablespace_name, df.file_name, autoextensible, contents, bigfile
-order by 2,3;
-WITH list_tbs AS (
-select distinct OBJ_NAME,TYPE_OBJ from ~tblhist
-where type_obj in ('TBS','FIL')
-and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
-                            where to_date(date_aud) < trunc(sysdate))
-)
-select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b><i>(default tmp)</i>' END||'</td>' as tbs,
- '<td bgcolor="'||CASE WHEN FILE_NAME NOT IN (select list_tbs.obj_name from list_tbs where type_obj='FIL') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||FILE_NAME||'</td>' as fname,
- '<td bgcolor="#33FF33" align=right>'||decode(round(sum(df.blocks)*~dbloc/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.blocks)*~dbloc/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
- decode(autoextensible,'NO','<td bgcolor="#FF9900" align=right>OFF</td>', '<td bgcolor="#33FF33" align=right>ON</td>')as autoext,
- '<td bgcolor="LIGHTBLUE" align=right>'||to_char(round(sum(increment_by)*~dbloc/(1024*1024),2),'99G999G990')||'</td>' as nsize,
--- maxbytes always in bytes even if bigfile ?
--- '<td bgcolor="LIGHTBLUE" align=right>'||to_char(decode(BIGFILE,'YES',round(sum(df.maxbytes)/(1024*1024),2),round(sum(df.maxbytes)/(1024*1024),2)),'99G999G990')||'</td>' as msize, '</tr>'
-'<td bgcolor="LIGHTBLUE" align=right>'||to_char(decode(BIGFILE,'YES',round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2),round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2)),'99G999G990')||'</td>' as msize, '</tr>'
-from DBA_TEMP_FILES df, DBA_TABLESPACES dt
-where df.tablespace_name=dt.tablespace_name(+)
-group by df.tablespace_name,df.file_name, autoextensible, bigfile
-order by 2,3;
-
-prompt </table><br>
 
 -- *************************************** Volumétrie tablespaces
 prompt <table border=1 width=100% bgcolor="WHITE">
@@ -1259,6 +1219,54 @@ BEGIN
    end if;
 END;
 /
+
+-- *************************************** Liste datafiles
+
+prompt <table border=1 width=100% bgcolor="WHITE">
+prompt <tr><td bgcolor="#3399CC" align=center colspan=6>
+prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
+print info
+prompt " width="20" height="20" alt="Tips..." title="Les nouveaux tablespaces et fichiers cr&eacute;&eacute;s depuis le dernier audit apparaissent en orange"></td>
+prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Liste des datafiles par tablespace</b></font></td></tr></table></td></tr>
+prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Taille (Mo)</b></td><td><b>Autoext.</b></td><td><b>Next</b></td><td><b>MaxSize</b></td></tr>
+
+WITH list_tbs AS (
+select distinct OBJ_NAME,TYPE_OBJ from ~tblhist
+where type_obj in ('TBS','FIL')
+and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
+                            where to_date(date_aud) < trunc(sysdate))
+)
+select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') and dt.contents NOT IN ('UNDO') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END||'</td>' as tbs,
+ '<td bgcolor="'||CASE WHEN df.FILE_NAME NOT IN (select list_tbs.obj_name from list_tbs where type_obj='FIL') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||df.FILE_NAME||'</td>' as fname,
+ '<td bgcolor="'||decode (CONTENTS,'UNDO','#33FF33',decode(autoextensible,'NO','#33FF33',CouleurLimite(sum(df.blocks)*~dbloc,(sum(df.maxbytes)-(sum(df.maxbytes)*0.20)),(sum(df.maxbytes)-(sum(df.maxbytes)*0.20))*0.10,1)))||'" align=right>'||decode(round(sum(df.bytes)/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.bytes)/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
+ decode(autoextensible,'NO','<td bgcolor="#FF9900" align=right>OFF</td>','<td bgcolor="#33FF33" align=right>ON</td>') as autoext,
+ '<td bgcolor="LIGHTBLUE" align=right>'||to_char(round(sum(increment_by)*~dbloc/(1024*1024),2),'99G999G990')||'</td>' as nsize,
+-- maxbytes always in bytes even if bigfile ?
+ '<td bgcolor="LIGHTBLUE" align=right>'||to_char(decode(BIGFILE,'YES',round(sum(df.maxbytes)/(1024*1024),2),round(sum(df.maxbytes)/(1024*1024),2)),'99G999G990')||'</td>' as msize, '</tr>'
+from DBA_DATA_FILES df, DBA_TABLESPACES dt
+where df.tablespace_name=dt.tablespace_name(+)
+group by df.tablespace_name, df.file_name, autoextensible, contents, bigfile
+order by 2,3;
+WITH list_tbs AS (
+select distinct OBJ_NAME,TYPE_OBJ from ~tblhist
+where type_obj in ('TBS','FIL')
+and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
+                            where to_date(date_aud) < trunc(sysdate))
+)
+select '<tr>','<td bgcolor="'||CASE WHEN df.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs where list_tbs.type_obj='TBS') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END||df.TABLESPACE_NAME||CASE WHEN df.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b><i>(default tmp)</i>' END||'</td>' as tbs,
+ '<td bgcolor="'||CASE WHEN FILE_NAME NOT IN (select list_tbs.obj_name from list_tbs where type_obj='FIL') THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">'||FILE_NAME||'</td>' as fname,
+ '<td bgcolor="#33FF33" align=right>'||decode(round(sum(df.blocks)*~dbloc/(1024*1024),2),NULL,to_char('0','S99G999G990D00'),to_char(round(sum(df.blocks)*~dbloc/(1024*1024),2),'99G999G990D00'))||'</td>' as taille,
+ decode(autoextensible,'NO','<td bgcolor="#FF9900" align=right>OFF</td>', '<td bgcolor="#33FF33" align=right>ON</td>')as autoext,
+ '<td bgcolor="LIGHTBLUE" align=right>'||to_char(round(sum(increment_by)*~dbloc/(1024*1024),2),'99G999G990')||'</td>' as nsize,
+-- maxbytes always in bytes even if bigfile ?
+-- '<td bgcolor="LIGHTBLUE" align=right>'||to_char(decode(BIGFILE,'YES',round(sum(df.maxbytes)/(1024*1024),2),round(sum(df.maxbytes)/(1024*1024),2)),'99G999G990')||'</td>' as msize, '</tr>'
+'<td bgcolor="LIGHTBLUE" align=right>'||to_char(decode(BIGFILE,'YES',round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2),round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2)),'99G999G990')||'</td>' as msize, '</tr>'
+from DBA_TEMP_FILES df, DBA_TABLESPACES dt
+where df.tablespace_name=dt.tablespace_name(+)
+group by df.tablespace_name,df.file_name, autoextensible, bigfile
+order by 2,3;
+
+prompt </table><br>
 
 -- *************************************** SEGMENTS
 prompt <hr>
@@ -2523,15 +2531,15 @@ prompt </table><br>
 -- *************************************** Liste des segments de plus de 100M
 prompt <!-- Segments de plus de 100M -->
 prompt <table border=1 width=100% bgcolor="WHITE">
-prompt <tr><td bgcolor="#3399CC" align=center colspan=4>
+prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
 prompt " width="20" height="20" alt="Info..." title="L'espace utilis&eacute; correspond aux blocs allou&eacute;s au segment, qu'ils soient vides (pr&eacute;allocation de blocs ou suppressions de donn&eacute;es) ou remplis."></td>
 prompt <td align=center><font color="WHITE"><b>Liste des segments de plus de 100Mo</b></font></td></tr></table></td></tr>
-prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=15%><b>Segment</b></td><td width=15%><b>Type</b></td><td width=15%><b>Taille</b></td></tr>
+prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=30%><b>Segment</b></td><td width=10%><b>Type</b></td><td width=30%><b>Table parent [(colonne LOB)]</b></td><td width=15%><b>Taille</b></td></tr>
 
-select '<tr>','<td bgcolor="LIGHTBLUE">',owner,'</td>', '<td bgcolor="LIGHTBLUE">',segment_name,'</td>', '<td bgcolor="LIGHTBLUE">',segment_type,'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(round(bytes/(1024*1024),0),'99G999G990'),' Mo</td>','</tr>'
-from dba_segments
+select '<tr>','<td bgcolor="LIGHTBLUE">',s.owner,'</td>', '<td bgcolor="LIGHTBLUE">',s.segment_name,'</td>', '<td bgcolor="LIGHTBLUE">',s.segment_type,'</td>', '<td bgcolor="LIGHTBLUE">',decode(substr(s.segment_type,1,3),'IND',(select table_name from dba_indexes where index_name = s.segment_name and owner = s.owner),'LOB',(select table_name||'('||column_name||')' from dba_lobs l where l.segment_name=s.segment_name and owner = s.owner)),'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(round(bytes/(1024*1024),0),'99G999G990'),' Mo</td>','</tr>'
+from dba_segments s
 where (segment_type like 'TABLE%' OR segment_type like 'INDEX%' OR segment_type like 'LOB%')
 and bytes/1024/1024 >100 
 and owner not in ~sysusers and owner not in ~exusers
