@@ -342,7 +342,7 @@ prompt <tr><td bgcolor="#3399CC" align=center colspan=6><font color="WHITE"><b>O
 
 SELECT DISTINCT '<tr><td bgcolor="LIGHTBLUE" colspan=6>',PARAMETER,'</td>','</tr>' FROM V$OPTION where VALUE = 'TRUE' order by parameter;
 
-prompt <tr><td bgcolor="#3399CC" align=center colspan=6><font color="WHITE"><b>Fonctionnalit&eacute;s autoris&eacute;es (&agrave; v&eacute;rifier selon l&rsquo;&eacute;dition)</b></font></td></tr>
+prompt <tr><td bgcolor="#3399CC" align=center colspan=6><font color="WHITE"><b>Fonctionnalit&eacute;s non soumises &agrave; licence (&agrave; v&eacute;rifier selon l&rsquo;&eacute;dition)</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE" align=center colspan=5><b>Fonctionnalit&eacute;</b></font></td><td bgcolor="WHITE" align=center><b>Active (derni&egrave;re date d&rsquo;usage)</b></font></td></tr>
 
 select '<tr><td bgcolor="LIGHTBLUE" colspan=5>',a.name,'</td><td bgcolor="LIGHTBLUE" align=right>',a.CURRENTLY_USED || ' (' || decode(a.last_usage_date,NULL,'NONE',to_char(a.last_usage_date)) || ')</td></tr>' from dba_feature_usage_statistics a where a.detected_usages > 0 and a.name not in ('Oracle Utility Datapump (Export)','Data Guard') and a.last_usage_date = (select max(last_usage_date) from dba_feature_usage_statistics where name = a.name) order by a.name;
@@ -1531,11 +1531,18 @@ prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:i
 print tips
 prompt " width="20" height="20" alt="Tips..." title="les jobs &rsquo;GATHER_STATS_JOB&rsquo; et &rsquo;MGMT_STATS_CONFIG_JOB&rsquo; (10g), ou seulement &rsquo;MGMT_STATS_CONFIG_JOB&rsquo; (11g) indiquent si les mises &agrave; jour des statistiques sont activ&eacute;es (&rsquo;SCHEDULED&rsquo;)"></td>
 
--- Pourquoi certains jobs sont "SCHEDULED" mais sans dates de lancement ??
+-- certains jobs sont "SCHEDULED" mais sans dates de lancement car ils n'ont été que 'ENABLED'
 
 prompt <td align=center><font color="WHITE"><b>Liste des Jobs</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>Owner</b></td><td><b>Job</b></td><td><b>Premier lancement</b></td><td><b>Prochain lancement</b></td><td><b>Statut</b></td></tr>
-      select  '<tr>','<td bgcolor="LIGHTBLUE" align=left>',OWNER,'</td>','<td bgcolor="LIGHTBLUE" align=left>',JOB_NAME,'</td>','<td bgcolor="LIGHTBLUE" align=left>',to_char(START_DATE,'DD-MM-YYYY HH:MI'),'</td>','<td bgcolor="LIGHTBLUE" align=left>',to_char(NEXT_RUN_DATE,'DD-MM-YYYY HH:MI'),'</td>','<td bgcolor="',decode(STATE, 'SCHEDULED', 'BLUE', 'SUCCEEDED', 'BLUE', 'ORANGE'),'" align=right><font color="WHITE"><b>',STATE,'</b></font></td>','</tr>'
+      select  '<tr>','<td bgcolor="LIGHTBLUE" align=left>',OWNER,'</td>','<td bgcolor="LIGHTBLUE" align=left>',JOB_NAME,'</td>','<td bgcolor="',decode(START_DATE,NULL,'LIGHTGREY','LIGHTBLUE'),'" align=left>',to_char(START_DATE,'DD-MM-YYYY HH:MI'),'</td>','<td bgcolor="',decode(NEXT_RUN_DATE,NULL,'LIGHTGREY','LIGHTBLUE'),'" align=left>',to_char(NEXT_RUN_DATE,'DD-MM-YYYY HH:MI'),'</td>','<td bgcolor="',
+CASE WHEN START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'BLUE' WHEN START_DATE IS NOT NULL AND STATE IN ('SCHEDULED','SUCCEEDED') THEN '#33FF33' ELSE 'ORANGE' END
+-- decode(STATE, 'SCHEDULED', 'BLUE', 'SUCCEEDED', 'BLUE', 'ORANGE')
+,'" align=right><font color="',
+CASE WHEN START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'WHITE' ELSE 'BLACK' END
+,'">',
+CASE WHEN START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'ENABLED' ELSE STATE END
+,'</font></td>','</tr>'
        FROM DBA_SCHEDULER_JOBS;
 
 prompt </table><br>
@@ -2540,7 +2547,7 @@ prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:i
 print info
 prompt " width="20" height="20" alt="Info..." title="L&apos;espace utilis&eacute; correspond aux blocs allou&eacute;s au segment, qu&apos;ils soient vides (pr&eacute;allocation de blocs ou suppressions de donn&eacute;es) ou remplis."></td>
 prompt <td align=center><font color="WHITE"><b>Liste des segments de plus de 100Mo</b></font></td></tr></table></td></tr>
-prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=30%><b>Segment</b></td><td width=10%><b>Type</b></td><td width=30%><b>Table parent [(colonne LOB)]</b></td><td width=15%><b>Taille</b></td></tr>
+prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=20%><b>Segment</b></td><td width=10%><b>Type</b></td><td width=40%><b>Table parent [(colonne LOB)]</b></td><td width=15%><b>Taille</b></td></tr>
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',s.owner,'</td>', '<td bgcolor="LIGHTBLUE">',s.segment_name,'</td>', '<td bgcolor="LIGHTBLUE">',s.segment_type,'</td>', '<td bgcolor="LIGHTBLUE">',decode(substr(s.segment_type,1,3),'IND',(select table_name from dba_indexes where index_name = s.segment_name and owner = s.owner),'LOB',(select table_name||'('||column_name||')' from dba_lobs l where l.segment_name=s.segment_name and owner = s.owner)),'</td>', '<td bgcolor="LIGHTBLUE" align=right>',to_char(round(bytes/(1024*1024),0),'99G999G990'),' Mo</td>','</tr>'
 from dba_segments s
