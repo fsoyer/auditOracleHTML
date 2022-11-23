@@ -1020,22 +1020,25 @@ prompt <hr>
 
 -- *************************************** Volumétrie tablespaces
 prompt <table border=1 width=100% bgcolor="WHITE">
-prompt <tr><td bgcolor="#3399CC" align=center colspan=10>
+prompt <tr><td bgcolor="#3399CC" align=center colspan=11>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
 prompt " width="20" height="20" alt="Tips..." title="Les nouveaux tablespaces cr&eacute;&eacute;s depuis le dernier audit apparaissent en orange"></td>
-prompt <td align=center><font color="WHITE"><b>Volum&eacute;trie actuelle + diff&eacute;rence de tailles depuis le dernier audit (
+prompt <td align=center><font color="WHITE"><b>Volum&eacute;trie totale + diff&eacute;rence de tailles depuis le dernier audit (
 print last_audit
 prompt )</b></font></td></tr></table></td></tr>
 
-prompt <tr><td><b>Tablespace</b></td><td><b>Bigfile</b></td><td><b>Contenu</b></td><td><b>Statut</b></td><td width=13%><b>Taille max. totale (Mo) avec autoextend</b></td><td width=10%><b>Total actuel (Mo) sur disque</b></td><td width=10%><b>Utilis&eacute; (Mo)</b></td><td width=10%><b>Libre actuel/taille max. totale</b></td><td width=10%><b>Total sur disque depuis dernier audit (Mo)</b></td><td width=10%><b>Utilis&eacute; depuis dernier audit (Mo)</b></td></tr>
+prompt <tr><td><b>Tablespace</b></td><td><b>Bigfile</b></td><td><b>Encrypted</b></td><td><b>Contenu</b></td><td><b>Statut</b></td><td width=13%><b>Taille max. totale (Mo) avec autoextend</b></td><td width=10%><b>Total actuel (Mo) sur disque</b></td><td width=10%><b>Utilis&eacute; (Mo)</b></td><td width=10%><b>Libre actuel/taille max. totale</b></td><td width=10%><b>Total sur disque depuis dernier audit (Mo)</b></td><td width=10%><b>Utilis&eacute; depuis dernier audit (Mo)</b></td></tr>
 
 -- TABLESPACES DATAS
 WITH list_tbs AS (
 select distinct OBJ_NAME from ~tblhist where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
       where to_date(date_aud) < trunc(sysdate))
 )
-select '<tr>','<td bgcolor="'||CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">',CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END,t.tablespace_name,CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END,'</td>', '<td bgcolor="',decode(BIGFILE,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (BIGFILE,'YES','WHITE','BLACK'),'">', maxt.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">','<td bgcolor="#FF0000">'),maxt.status,'</td>',
+select '<tr>','<td bgcolor="'||CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">',CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END,t.tablespace_name,CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END,'</td>',
+'<td bgcolor="',decode(maxt.BIGFILE,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (maxt.BIGFILE,'YES','WHITE','BLACK'),'">', maxt.bigfile,'</font></td>',
+'<td bgcolor="',decode(venc.ENCRYPTEDTS,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (venc.ENCRYPTEDTS,'YES','WHITE','BLACK'),'">', decode(venc.ENCRYPTEDTS,'','NO',venc.ENCRYPTEDTS),'</font></td>',
+'<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">','<td bgcolor="#FF0000">'),maxt.status,'</td>',
 --       '<td bgcolor="LIGHTBLUE" align=right>',decode(t.autoextensible,'NO',decode(t.total,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(t.total,'99G999G990D00')),decode(maxt.maxtotal,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(maxt.maxtotal,'99G999G990D00'))),'</td>' TOTAL,
        '<td bgcolor="LIGHTBLUE" align=right>',to_char(maxt.maxtotal,'99G999G990D00'),'</td>' TOTAL,
        '<td bgcolor="LIGHTBLUE" align=right>',decode(t.total,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(t.total,'99G999G990D00')),'</td>' TOTAL_CURRENT,
@@ -1065,6 +1068,8 @@ from (select tablespace_name,
       from dba_data_files df, dba_tablespaces dt
       where df.tablespace_name=dt.tablespace_name(+)
       group by df.tablespace_name, dt.contents, dt.status, BIGFILE) maxt,
+     V$ENCRYPTED_TABLESPACES venc,
+     V$TABLESPACE vtbs,
      (select tablespace_name,
              round(sum(blocks)*~dbloc/(1024*1024),2) utilise
       from dba_segments
@@ -1089,10 +1094,12 @@ and t.tablespace_name=maxt.tablespace_name(+)
 and a.obj_name=h.obj_name(+)
 and a.obj_name=t.tablespace_name
 and maxt.contents not in ('UNDO')
+and vtbs.TS# = venc.TS#(+)
+and vtbs.NAME = t.tablespace_name
 order by t.tablespace_name;
 
 -- TABLESPACE UNDO
-select '<tr>','<td bgcolor="LIGHTBLUE">',t.tablespace_name,'</td>' Tablespace, '<td bgcolor="',decode(BIGFILE,'YES','#FF9900','LIGHTBLUE'),'" align=center>',maxt.bigfile,'</td>', '<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">',maxt.status,'</td>','<td bgcolor="#FF0000">',maxt.status,'</td>'),
+select '<tr>','<td bgcolor="LIGHTBLUE">',t.tablespace_name,'</td>' Tablespace, '<td bgcolor="',decode(BIGFILE,'YES','#FF9900','LIGHTBLUE'),'" align=center>',maxt.bigfile,'</td>', '<td bgcolor="LIGHTGREY"></td>', '<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">'||maxt.status||'</td>','OFFLINE','<td bgcolor="#FF0000">'||maxt.status||'</td>','<td bgcolor="#FF0000"></td>'),
        '<td bgcolor="LIGHTBLUE" align=right>',decode(t.autoextensible,'NO',decode(t.total,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(t.total,'99G999G990D00')),decode(maxt.maxtotal,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(maxt.maxtotal,'99G999G990D00'))),'</td>' TOTAL,
        '<td bgcolor="LIGHTBLUE" align=right>',decode(t.total,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(t.total,'99G999G990D00')),'</td>' TOTAL_CURRENT,
        '<td bgcolor="LIGHTBLUE" align=right>',decode(u.utilise,'','0,00',to_char(u.utilise,'99G999G990D00')),'</td>' UTILISE,
@@ -1121,7 +1128,7 @@ and t.tablespace_name=maxt.tablespace_name(+)
 and maxt.contents in ('UNDO');
 
 -- TABLESPACE TEMP
-select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END,ty.tablespace_name,CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b><i>(default tmp)</i>' END,'</td>','<td bgcolor="',decode(ty.bigfile,'YES','BLUE"','LIGHTBLUE"'),' align=center>','<font color="',decode(ty.bigfile,'YES','WHITE">','BLACK">'),ty.bigfile,'</font></td>', '<td bgcolor="LIGHTBLUE">',ty.contents,'</td>', decode(ty.status,'ONLINE','<td bgcolor="LIGHTBLUE">',ty.status,'</td>','<td bgcolor="#FF0000">',ty.status,'</td>'),
+select '<tr>','<td bgcolor="LIGHTBLUE">',CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN '<b>' END,ty.tablespace_name,CASE WHEN ty.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_TEMP_TABLESPACE') THEN ' </b><i>(default tmp)</i>' END,'</td>','<td bgcolor="',decode(ty.bigfile,'YES','BLUE"','LIGHTBLUE"'),' align=center>','<font color="',decode(ty.bigfile,'YES','WHITE">','BLACK">'),ty.bigfile,'</font></td>','<td bgcolor="LIGHTGREY"></td>', '<td bgcolor="LIGHTBLUE">',ty.contents,'</td>', decode(ty.status,'ONLINE','<td bgcolor="LIGHTBLUE">'||ty.status||'</td>','OFFLINE','<td bgcolor="#FF0000">'||ty.status||'</td>','<td bgcolor="LIGHTGREY"></td>'),
          '<td bgcolor="LIGHTBLUE" align=right>',to_char(ty.maxtotal,'99G999G990D00'),'</td>' as maxtotal, 
          '<td bgcolor="LIGHTBLUE" align=right>',to_char(ty.total,'99G999G990D00'),'</td>' as total, 
          '<td bgcolor="LIGHTBLUE" align=right>0,00</td>' as utilise,
@@ -1139,7 +1146,7 @@ from (select df.tablespace_name, dt.contents, dt.status,dt.bigfile,
       group by df.tablespace_name, dt.contents, dt.status,dt.bigfile) ty;
 
 -- TOTAUX
-select  '<tr>','<td bgcolor="WHITE" colspan=4>TOTAL</td>',
+select  '<tr>','<td bgcolor="WHITE" colspan=5>TOTAL</td>',
         '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',to_char(decode(dmty.total,'',0,dmty.total)+decode(dmtn.total,'',0,dmtn.total)+(tmty.total+tmtn.total),'99G999G990D00'),'</b></font></td>' as maxtotal, 
         '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',to_char(dt.total+tty.total+ttn.total,'99G999G990D00'),'</b></font></td>' as total, 
         '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',to_char(du.utilise+tu.utilise,'99G999G990D00'),'</b></font></td>' as utilise,
@@ -1536,7 +1543,7 @@ prompt " width="20" height="20" alt="Tips..." title="les jobs &rsquo;GATHER_STAT
 prompt <td align=center><font color="WHITE"><b>Liste des Jobs</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>Owner</b></td><td><b>Job</b></td><td><b>Premier lancement</b></td><td><b>Prochain lancement</b></td><td><b>Statut</b></td></tr>
       select  '<tr>','<td bgcolor="LIGHTBLUE" align=left>',OWNER,'</td>','<td bgcolor="LIGHTBLUE" align=left>',JOB_NAME,'</td>','<td bgcolor="',decode(START_DATE,NULL,'LIGHTGREY','LIGHTBLUE'),'" align=left>',to_char(START_DATE,'DD-MM-YYYY HH:MI'),'</td>','<td bgcolor="',decode(NEXT_RUN_DATE,NULL,'LIGHTGREY','LIGHTBLUE'),'" align=left>',to_char(NEXT_RUN_DATE,'DD-MM-YYYY HH:MI'),'</td>','<td bgcolor="',
-CASE WHEN START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'BLUE' WHEN START_DATE IS NOT NULL AND STATE IN ('SCHEDULED','SUCCEEDED') THEN '#33FF33' ELSE 'ORANGE' END
+CASE WHEN START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'BLUE' WHEN START_DATE IS NOT NULL AND STATE IN ('SCHEDULED','SUCCEEDED') THEN '#33FF33' ELSE 'LIGHTGREY' END
 -- decode(STATE, 'SCHEDULED', 'BLUE', 'SUCCEEDED', 'BLUE', 'ORANGE')
 ,'" align=right><font color="',
 CASE WHEN START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'WHITE' ELSE 'BLACK' END
@@ -2565,7 +2572,7 @@ BEGIN
    and rownum = 1;
 
    if cnt_obj=0 then
-      dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td></tr>');
    end if;
 end;
 /
