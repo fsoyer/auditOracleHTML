@@ -24,7 +24,7 @@
 * TODO : translation on the fly. Try : Init a variable LANG at the beginning of the script. Then, init variables TXT_[ID_of_the_sentence]_[LANG] with text translated. Finally, in the script for each text, use something like : "SELECT TXT_[id]_&LANG" (to be tested and validated)
 		 To think : change thousand separator in the same way ! Maybe just an environment variable when launching the script ?
 * TODO : USE VARIABLES AT THE BEGINNING OF THE SCRIPT FOR ALERT THRESHOLDS
-* TODO : Do a summary (HTML anchors). Frames or javascript ?
+* TODO : Do a summary (HTML anchors). Javascript ?
 * TODO : Replace stored PL/SQL functions for colorization by javascript ?
 *        Like javascript systematically inserted at the beginning of the HTML file, reusable in queries
 * TODO : replace all "dbms_output" by "prompt" (then remove "serveroutput on") : is this possible everywhere, specially in pl/sql blocks ?

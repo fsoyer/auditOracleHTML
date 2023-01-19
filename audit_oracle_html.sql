@@ -169,7 +169,7 @@ prompt <tr><td bgcolor="#3399CC" align=center colspan=2><font color="WHITE"><b>H
 -- Creation table HISTAUDIT si necessaire
 prompt <tr><td width=20%><b>Table historique</b></td>
 
--- force sqlplus to exit on error, tablespace TOOLS (or whatever is in variable "tbstools") is mandatory
+-- force sqlplus to exit on error, tablespace TOOLS (or whatever is in variable "tbstools") is required
 WHENEVER sqlerror EXIT sql.sqlcode
 
 DECLARE
@@ -374,7 +374,9 @@ BEGIN
       dbms_output.put_line(html);
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - ARCHIVES Compression</td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from V$PARAMETER where UPPER(name) like '%LOG_ARCHIVE_DEST%' and UPPER(value) like '%COMPRESSION=ENABLE%';
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression</td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)') or last_usage_date is null);
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Export)'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)');
+      dbms_output.put_line(html);
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Import)'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)');
       dbms_output.put_line(html);
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Flashback Data Archive (Total Recall)</td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN dbafats.counter + dbafat.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from DBA_FLASHBACK_ARCHIVE a left join DBA_FLASHBACK_ARCHIVE_TS b on a.FLASHBACK_ARCHIVE# = b.FLASHBACK_ARCHIVE#) dbafats, (select count(*) counter from DBA_FLASHBACK_ARCHIVE_TABLES) dbafat;
       dbms_output.put_line(html);
@@ -1583,7 +1585,7 @@ BEGIN
       dbms_output.put_line(v_res);
      end loop;
   $END
--- mandatory for 10g as the block $IF-$END disapears, it needs at least on line between BEGIN and END
+-- required for 10g as the block $IF-$END disapears, it needs at least on line between BEGIN and END
   v_sql := '';
 END;
 /
@@ -1772,7 +1774,7 @@ BEGIN
     select '<tr><td bgcolor="LIGHTGREY"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor="LIGHTGREY"></td><td bgcolor="LIGHTGREY"></td></tr>' into v_res1 from dual;
     dbms_output.put_line(v_res1);
   $END
--- mandatory for 10g as the block $IF-$END disapears, it needs at least one line between BEGIN and END
+-- required for 10g as the block $IF-$END disapears, it needs at least one line between BEGIN and END
   v_res1 := '';
 END;
 /
