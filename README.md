@@ -1,5 +1,5 @@
 # auditOracleHTML
-Script for generating an Oracle (10g+) audit report of performances in HTML
+Script for generating an Oracle (11g+) audit report of performances in HTML
 ----------------------------------
 Freely inspired from internet tips, informations, shares, scripts.
 

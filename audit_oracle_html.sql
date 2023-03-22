@@ -1,5 +1,5 @@
 -- AUDIT BASES ORACLE
--- Compatible Oracle 10g to 19c
+-- Compatible Oracle 11g to 19c
 -- (c) 2005, Frank Soyer <frank.soyer@gmail.com>
 
 -- This program is free software; you can redistribute it and/or
@@ -366,22 +366,23 @@ BEGIN
 
    SELECT count(*) into opt FROM V$OPTION where PARAMETER like '%Advanced Compression%' and VALUE = 'TRUE';
    IF opt > 0 then
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - OLTP Table Compression</td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN dbat.counter + dbatp.counter + dbatsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from dba_tables where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and owner not in ~sysusers and owner not in ~exusers) dbat, (select count(*) counter from dba_tab_partitions where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and table_owner not in ~sysusers and table_owner not in ~exusers) dbatp, (select count(*) counter from dba_tab_subpartitions where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and table_owner not in ~sysusers and table_owner not in ~exusers) dbatsp;
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - OLTP Table Compression</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN dbat.counter + dbatp.counter + dbatsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from dba_tables where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and owner not in ~sysusers and owner not in ~exusers) dbat, (select count(*) counter from dba_tab_partitions where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and table_owner not in ~sysusers and table_owner not in ~exusers) dbatp, (select count(*) counter from dba_tab_subpartitions where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and table_owner not in ~sysusers and table_owner not in ~exusers) dbatsp;
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - SecureFiles Compression and Deduplication</td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN dbal.counter + dbalp.counter + dbalsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from dba_lobs where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and owner not in ~sysusers and owner not in ~exusers) dbal, (select count(*) counter from dba_lob_partitions where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalp, (select count(*) counter from dba_lob_subpartitions where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalsp;
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - SecureFiles Compression and Deduplication</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN dbal.counter + dbalp.counter + dbalsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from dba_lobs where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and owner not in ~sysusers and owner not in ~exusers) dbal, (select count(*) counter from dba_lob_partitions where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalp, (select count(*) counter from dba_lob_subpartitions where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalsp;
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Guard Network Compression</td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Data Guard' and lower(to_char(dbms_lob.substr(FEATURE_INFO,4000))) like '%compression used: true%' and last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Data Guard');
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Guard Network Compression</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Data Guard' and lower(to_char(dbms_lob.substr(FEATURE_INFO,4000))) like '%compression used: true%' and last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Data Guard');
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - ARCHIVES Compression</td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from V$PARAMETER where UPPER(name) like '%LOG_ARCHIVE_DEST%' and UPPER(value) like '%COMPRESSION=ENABLE%';
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - ARCHIVES Compression</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from V$PARAMETER where UPPER(name) like '%LOG_ARCHIVE_DEST%' and UPPER(value) like '%COMPRESSION=ENABLE%';
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Export)'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)');
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'|| '<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Export)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)');
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Import)'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)');
-      dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Flashback Data Archive (Total Recall)</td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN dbafats.counter + dbafat.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from DBA_FLASHBACK_ARCHIVE a left join DBA_FLASHBACK_ARCHIVE_TS b on a.FLASHBACK_ARCHIVE# = b.FLASHBACK_ARCHIVE#) dbafats, (select count(*) counter from DBA_FLASHBACK_ARCHIVE_TABLES) dbafat;
+-- Import is not concerned by advanced compression feature
+--      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Import)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)');
+--      dbms_output.put_line(html);
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Flashback Data Archive (Total Recall)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN dbafats.counter + dbafat.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from DBA_FLASHBACK_ARCHIVE a left join DBA_FLASHBACK_ARCHIVE_TS b on a.FLASHBACK_ARCHIVE# = b.FLASHBACK_ARCHIVE#) dbafats, (select count(*) counter from DBA_FLASHBACK_ARCHIVE_TABLES) dbafat;
       dbms_output.put_line(html);
    else
-      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>ADVANCED COMPRESSION</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>NO</td><td bgcolor="LIGHTGREY" align=right><font color=black><i>NO</i></font></td></tr>');
+      dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>ADVANCED COMPRESSION</b></td><td bgcolor="LIGHTGREY" align=right><font color=black>By default</td><td bgcolor="LIGHTGREY" align=right><font color=black><i>NO</i></font></td></tr>');
    end if;
    $ELSE
       select '' into html from dual;
@@ -1033,40 +1034,74 @@ prompt )</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>Tablespace</b></td><td><b>Bigfile</b></td><td><b>Encrypted</b></td><td><b>Contenu</b></td><td><b>Statut</b></td><td width=13%><b>Taille max. totale (Mo) avec autoextend</b></td><td width=10%><b>Total actuel (Mo) sur disque</b></td><td width=10%><b>Utilis&eacute; (Mo)</b></td><td width=10%><b>Libre actuel/taille max. totale</b></td><td width=10%><b>Total sur disque depuis dernier audit (Mo)</b></td><td width=10%><b>Utilis&eacute; depuis dernier audit (Mo)</b></td></tr>
 
 -- TABLESPACES DATAS
+
+DECLARE
+ v_cur SYS_REFCURSOR;
+ v_res varchar2(2000);
+ v_sql varchar2(6000);
+-- use of $IF $THEN $END for pl/sql conditional compilation
+BEGIN
+  $IF dbms_db_version.version >= 11 $THEN
+    v_sql := '
 WITH list_tbs AS (
-select distinct OBJ_NAME from ~tblhist where type_obj='TBS' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
+select distinct OBJ_NAME from ~tblhist where type_obj=''TBS'' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
       where to_date(date_aud) < trunc(sysdate))
 )
-select '<tr>','<td bgcolor="'||CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN 'ORANGE' ELSE 'LIGHTBLUE' END||'">',CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN '<b>' END,t.tablespace_name,CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = 'DEFAULT_PERMANENT_TABLESPACE') THEN ' </b><i>(default tbs)</i>' END,'</td>',
-       '<td bgcolor="',decode(maxt.BIGFILE,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (maxt.BIGFILE,'YES','WHITE','BLACK'),'">', maxt.bigfile,'</font></td>',
-       '<td bgcolor="',decode(venc.ENCRYPTEDTS,'YES','BLUE','LIGHTBLUE'),'" align=center>', '<font color="',decode (venc.ENCRYPTEDTS,'YES','WHITE','BLACK'),'">', decode(venc.ENCRYPTEDTS,'','NO',venc.ENCRYPTEDTS),'</font></td>',
-       '<td bgcolor="LIGHTBLUE">',maxt.contents,'</td>', decode(maxt.status,'ONLINE','<td bgcolor="LIGHTBLUE">','<td bgcolor="#FF0000">'),maxt.status,'</td>',
---       '<td bgcolor="LIGHTBLUE" align=right>',decode(t.autoextensible,'NO',decode(t.total,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(t.total,'99G999G990D00')),decode(maxt.maxtotal,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(maxt.maxtotal,'99G999G990D00'))),'</td>' TOTAL,
-       '<td bgcolor="LIGHTBLUE" align=right>',to_char(maxt.maxtotal,'99G999G990D00'),'</td>' TOTAL,
-       '<td bgcolor="LIGHTBLUE" align=right>',decode(t.total,'',to_char(round(l.libre,0),'99G999G990D00'),to_char(t.total,'99G999G990D00')),'</td>' TOTAL_CURRENT,
-       '<td bgcolor="LIGHTBLUE" align=right>',decode(u.utilise,'','0,00',to_char(u.utilise,'99G999G990D00')),'</td>' UTILISE,
---       '<td bgcolor="',decode(t.autoextensible,'NO',decode(u.utilise,'', '#33FF33',CouleurLimite(u.utilise,t.total-(t.total*0.20),t.total*0.10,1)),decode(u.utilise,'', '#33FF33', CouleurLimite(u.utilise,maxt.maxtotal-(maxt.maxtotal*0.20),maxt.maxtotal*0.10,1))),'" align=right>',decode(t.autoextensible,'NO',to_char(l.libre,'99G999G990D00'),to_char(maxt.maxtotal-(decode(u.utilise,'',0,u.utilise)),'99G999G990D00')),'</td>' LIBRE,
-       '<td bgcolor="',decode(u.utilise,'', '#33FF33', CouleurLimite(u.utilise,maxt.maxtotal-(maxt.maxtotal*0.20),maxt.maxtotal*0.10,1)),'" align=right>',to_char(maxt.maxtotal-(decode(u.utilise,'',0,u.utilise)),'99G999G990D00'),'</td>' LIBRE,
+select ''<tr><td bgcolor="''||
+CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN ''ORANGE'' ELSE ''LIGHTBLUE'' END||
+''">''||
+CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = ''DEFAULT_PERMANENT_TABLESPACE'') THEN ''<b>'' END||
+t.tablespace_name||
+CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = ''DEFAULT_PERMANENT_TABLESPACE'') THEN '' </b><i>(default tbs)</i>'' END||
+''</td><td bgcolor="''||
+decode(maxt.BIGFILE,''YES'',''BLUE'',''LIGHTBLUE'')||
+''" align=center><font color="''||
+decode (maxt.BIGFILE,''YES'',''WHITE'',''BLACK'')||
+''">''||
+maxt.bigfile||
+''</font></td><td bgcolor="''||
+decode(venc.ENCRYPTEDTS,''YES'',''BLUE'',''LIGHTBLUE'')||
+''" align=center><font color="''||
+decode (venc.ENCRYPTEDTS,''YES'',''WHITE'',''BLACK'')||
+''">''||
+decode(venc.ENCRYPTEDTS,'''',''NO'',venc.ENCRYPTEDTS)||
+''</font></td><td bgcolor="LIGHTBLUE">''||
+maxt.contents||
+''</td>''||
+decode(maxt.status,''ONLINE'',''<td bgcolor="LIGHTBLUE">'',''<td bgcolor="#FF0000">'')||
+maxt.status||
+''</td><td bgcolor="LIGHTBLUE" align=right>''||
+to_char(maxt.maxtotal,''99G999G990D00'')||
+''</td><td bgcolor="LIGHTBLUE" align=right>''||
+decode(t.total,'''',to_char(round(l.libre,0),''99G999G990D00''),to_char(t.total,''99G999G990D00''))||
+''</td><td bgcolor="LIGHTBLUE" align=right>''||
+decode(u.utilise,'''',''0,00'',to_char(u.utilise,''99G999G990D00''))||
+''</td><td bgcolor="''||
+decode(u.utilise,'''', ''#33FF33'', CouleurLimite(u.utilise,maxt.maxtotal-(maxt.maxtotal*0.20),maxt.maxtotal*0.10,1))||
+''" align=right>''||
+to_char(maxt.maxtotal-(decode(u.utilise,'''',0,u.utilise)),''99G999G990D00'')||
+''</td>''||
 decode(SIGN(a.total-h.total),
-      -1,'<td bgcolor="#33FF33" align=right>'||to_char(a.total-h.total,'S99G999G990D00')||'</td>',
-       0,'<td bgcolor="LIGHTBLUE" align=right >'||to_char(a.total-h.total,'99G999G990D00')||'</td>',
-       1,'<td bgcolor="ORANGE" align=right>'||to_char(a.total-h.total,'S99G999G990D00')||'</td>',
-       NULL,'<td bgcolor="LIGHTGREY" align=right >Premier audit</td>'),
+      -1,''<td bgcolor="#33FF33" align=right>''||to_char(a.total-h.total,''S99G999G990D00'')||''</td>'',
+       0,''<td bgcolor="LIGHTBLUE" align=right >''||to_char(a.total-h.total,''99G999G990D00'')||''</td>'',
+       1,''<td bgcolor="ORANGE" align=right>''||to_char(a.total-h.total,''S99G999G990D00'')||''</td>'',
+       NULL,''<td bgcolor="LIGHTGREY" align=right >Premier audit</td>'')||
 decode(SIGN(a.utilis-h.utilis),
-      -1,'<td bgcolor="#33FF33" align=right >'||to_char(a.utilis-h.utilis,'S99G999G990D00')||'</td>',
-       0,'<td bgcolor="LIGHTBLUE" align=right>'||to_char(a.utilis-h.utilis,'99G999G990D00')||'</td>',
-       1,'<td bgcolor="ORANGE" align=right>'||to_char(a.utilis-h.utilis,'S99G999G990D00')||'</td>',
-       NULL,'<td bgcolor="LIGHTGREY" align=right>Premier audit</td>'),'</tr>'
+      -1,''<td bgcolor="#33FF33" align=right >''||to_char(a.utilis-h.utilis,''S99G999G990D00'')||''</td>'',
+       0,''<td bgcolor="LIGHTBLUE" align=right>''||to_char(a.utilis-h.utilis,''99G999G990D00'')||''</td>'',
+       1,''<td bgcolor="ORANGE" align=right>''||to_char(a.utilis-h.utilis,''S99G999G990D00'')||''</td>'',
+       NULL,''<td bgcolor="LIGHTGREY" align=right>Premier audit</td>'')||
+''</tr>''
 from (select tablespace_name,
              round(sum(bytes)/(1024*1024),2) total
       from dba_data_files
       group by tablespace_name) t,
--- dba_free_space ne s'occupe pas de l'autoextent, il ne calcule que par rapport à la place occupée actuellement sur disque
+-- dba_free_space ne s''occupe pas de l''autoextent, il ne calcule que par rapport à la place occupée actuellement sur disque
 -- pour calculer plutôt par rapport au max autoextent, on affiche le résultat de (maxt - utilise)
      (select df.tablespace_name, dt.contents, dt.status,
              bigfile,
---             decode(BIGFILE,'YES',round(sum(df.maxbytes)/(1024*1024*1024),2),round(sum(df.maxbytes)/(1024*1024),2)) maxtotal
-            decode(BIGFILE,'YES',round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2),round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2)) maxtotal
+--             decode(BIGFILE,''YES'',round(sum(df.maxbytes)/(1024*1024*1024),2),round(sum(df.maxbytes)/(1024*1024),2)) maxtotal
+            decode(BIGFILE,''YES'',round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2),round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2)) maxtotal
       from dba_data_files df, dba_tablespaces dt
       where df.tablespace_name=dt.tablespace_name(+)
       group by df.tablespace_name, dt.contents, dt.status, BIGFILE) maxt,
@@ -1082,23 +1117,135 @@ from (select tablespace_name,
       group by tablespace_name) l,
       (select * from ~tblhist
          where trunc(to_date(date_aud))=trunc(sysdate)
-         and type_obj='TBS') a,
+         and type_obj=''TBS'') a,
       (select * from ~tblhist
          where to_date(date_aud) like
         (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
             where to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
       where to_date(date_aud) < trunc(sysdate))
-            and type_obj='TBS')
-         and type_obj='TBS') h
+            and type_obj=''TBS'')
+         and type_obj=''TBS'') h
 where t.tablespace_name=u.tablespace_name(+)
 and u.tablespace_name=l.tablespace_name(+)
 and t.tablespace_name=maxt.tablespace_name(+)
 and a.obj_name=h.obj_name(+)
 and a.obj_name=t.tablespace_name
-and maxt.contents not in ('UNDO')
+and maxt.contents not in (''UNDO'')
 and vtbs.TS# = venc.TS#(+)
 and vtbs.NAME = t.tablespace_name
-order by t.tablespace_name;
+order by t.tablespace_name
+';
+    open v_cur for v_sql;
+    loop
+      fetch v_cur into v_res;
+      EXIT WHEN v_cur%NOTFOUND;
+      dbms_output.put_line(v_res);
+     end loop;
+  $ELSE
+    v_sql := '
+WITH list_tbs AS (
+select distinct OBJ_NAME from system.histaudit where type_obj=''TBS'' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+      where to_date(date_aud) < trunc(sysdate))
+)
+select ''<tr><td bgcolor="''||
+CASE WHEN t.TABLESPACE_NAME NOT IN (select list_tbs.obj_name from list_tbs) THEN ''ORANGE'' ELSE ''LIGHTBLUE'' END||
+''">''||
+CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = ''DEFAULT_PERMANENT_TABLESPACE'') THEN ''<b>'' END||
+t.tablespace_name||
+CASE WHEN t.TABLESPACE_NAME IN (select DISTINCT PROPERTY_VALUE from DATABASE_PROPERTIES where PROPERTY_NAME = ''DEFAULT_PERMANENT_TABLESPACE'') THEN '' </b><i>(default tbs)</i>'' END||
+''</td><td bgcolor="''||
+decode(maxt.BIGFILE,''YES'',''BLUE'',''LIGHTBLUE'')||
+''" align=center><font color="''||
+decode (maxt.BIGFILE,''YES'',''WHITE'',''BLACK'')||
+''">''||
+maxt.bigfile||
+''</font></td>''||
+''<td bgcolor="LIGHTBLUE" align=center><font color="BLACK">N/A</font></td>''||
+''<td bgcolor="LIGHTBLUE">''||
+maxt.contents||
+''</td>''||
+decode(maxt.status,''ONLINE'',''<td bgcolor="LIGHTBLUE">'',''<td bgcolor="#FF0000">'')||
+maxt.status||
+''</td><td bgcolor="LIGHTBLUE" align=right>''||
+to_char(maxt.maxtotal,''99G999G990D00'')||
+''</td><td bgcolor="LIGHTBLUE" align=right>''||
+decode(t.total,'''',to_char(round(l.libre,0),''99G999G990D00''),to_char(t.total,''99G999G990D00''))||
+''</td><td bgcolor="LIGHTBLUE" align=right>''||
+decode(u.utilise,'''',''0,00'',to_char(u.utilise,''99G999G990D00''))||
+''</td><td bgcolor="''||
+decode(u.utilise,'''', ''#33FF33'', CouleurLimite(u.utilise,maxt.maxtotal-(maxt.maxtotal*0.20),maxt.maxtotal*0.10,1))||
+''" align=right>''||
+to_char(maxt.maxtotal-(decode(u.utilise,'''',0,u.utilise)),''99G999G990D00'')||
+''</td>''||
+decode(SIGN(a.total-h.total),
+      -1,''<td bgcolor="#33FF33" align=right>''||to_char(a.total-h.total,''S99G999G990D00'')||''</td>'',
+       0,''<td bgcolor="LIGHTBLUE" align=right >''||to_char(a.total-h.total,''99G999G990D00'')||''</td>'',
+       1,''<td bgcolor="ORANGE" align=right>''||to_char(a.total-h.total,''S99G999G990D00'')||''</td>'',
+       NULL,''<td bgcolor="LIGHTGREY" align=right >Premier audit</td>'')||
+decode(SIGN(a.utilis-h.utilis),
+      -1,''<td bgcolor="#33FF33" align=right >''||to_char(a.utilis-h.utilis,''S99G999G990D00'')||''</td>'',
+       0,''<td bgcolor="LIGHTBLUE" align=right>''||to_char(a.utilis-h.utilis,''99G999G990D00'')||''</td>'',
+       1,''<td bgcolor="ORANGE" align=right>''||to_char(a.utilis-h.utilis,''S99G999G990D00'')||''</td>'',
+       NULL,''<td bgcolor="LIGHTGREY" align=right>Premier audit</td>'')||
+''</tr>''
+from (select tablespace_name,
+             round(sum(bytes)/(1024*1024),2) total
+      from dba_data_files
+      group by tablespace_name) t,
+-- dba_free_space ne s''occupe pas de l''autoextent, il ne calcule que par rapport à la place occupée actuellement sur disque
+-- pour calculer plutôt par rapport au max autoextent, on affiche le résultat de (maxt - utilise)
+     (select df.tablespace_name, dt.contents, dt.status,
+             bigfile,
+--             decode(BIGFILE,''YES'',round(sum(df.maxbytes)/(1024*1024*1024),2),round(sum(df.maxbytes)/(1024*1024),2)) maxtotal
+            decode(BIGFILE,''YES'',round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2),round(sum(case when df.maxbytes=0 then (bytes/(1024*1024)) else (df.maxbytes/(1024*1024)) end),2)) maxtotal
+      from dba_data_files df, dba_tablespaces dt
+      where df.tablespace_name=dt.tablespace_name(+)
+      group by df.tablespace_name, dt.contents, dt.status, BIGFILE) maxt,
+--     V$ENCRYPTED_TABLESPACES venc,
+     V$TABLESPACE vtbs,
+     (select tablespace_name,
+             round(sum(blocks)*4096/(1024*1024),2) utilise
+      from dba_segments
+      group by tablespace_name) u,
+     (select tablespace_name,
+             round(sum(blocks)*4096/(1024*1024),2) libre
+      from dba_free_space
+      group by tablespace_name) l,
+      (select * from system.histaudit
+         where trunc(to_date(date_aud))=trunc(sysdate)
+         and type_obj=''TBS'') a,
+      (select * from system.histaudit
+         where to_date(date_aud) like
+        (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+            where to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+      where to_date(date_aud) < trunc(sysdate))
+            and type_obj=''TBS'')
+         and type_obj=''TBS'') h
+where t.tablespace_name=u.tablespace_name(+)
+and u.tablespace_name=l.tablespace_name(+)
+and t.tablespace_name=maxt.tablespace_name(+)
+and a.obj_name=h.obj_name(+)
+and a.obj_name=t.tablespace_name
+and maxt.contents not in (''UNDO'')
+-- and vtbs.TS# = venc.TS#(+)
+-- and vtbs.NAME = t.tablespace_name
+order by t.tablespace_name
+';
+    open v_cur for v_sql;
+    loop
+      fetch v_cur into v_res;
+      EXIT WHEN v_cur%NOTFOUND;
+      dbms_output.put_line(v_res);
+     end loop;
+  $END
+-- required for 10g as the block $IF-$END disapears, it needs at least on line between BEGIN and END
+  v_sql := '';
+END;
+/
+
+
+
+
 
 -- TABLESPACE UNDO
 select '<tr>','<td bgcolor="LIGHTBLUE">',t.tablespace_name,'</td>' Tablespace,
@@ -1212,7 +1359,6 @@ where a.obj_name=h.obj_name;
 prompt </table><br>
 
 -- TABLESPACE(S) SUPPRIME(S)
-
 DECLARE
  tbsremoved_cnt number := 0;
  v_cur SYS_REFCURSOR;
@@ -1344,9 +1490,9 @@ prompt <div align=center><b><font color="WHITE" size=2>REDO LOG FILES</font></b>
 prompt <hr>
 -- *************************************** Redo logs files
 prompt <table border=1 width=100% bgcolor="WHITE">
-prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>Liste des fichiers redo logs</b></font></td></tr>
-prompt <tr><td width=8%><b>Groupe</b></td><td width=25%><b>Fichier</b></td><td width=5%><b>Statut</b></td><td width=15%><b>Taille (Mo)</b></td></tr>
-select '<tr>','<td bgcolor="LIGHTBLUE">', l.group#, '</td>', '<td bgcolor="LIGHTBLUE">', member, '</td>', '<td bgcolor="',decode(f.status, 'STALE', 'ORANGE">', 'INVALID', '#FF0000">', '#33FF33">OK'),f.status,'</td>','<td bgcolor="LIGHTBLUE" align=right>',to_char(round(bytes/(1024*1024),2),'99G999G990D00'),'</td>','</tr>' from v$log l,v$logfile f where l.group# = f.group# order by l.group#;
+prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Liste des fichiers redo logs</b></font></td></tr>
+prompt <tr><td width=8%><b>Groupe</b></td><td width=25%><b>Fichier</b></td><td width=5%><b>Type</b></td><td width=5%><b>Statut</b></td><td width=15%><b>Taille (Mo)</b></td></tr>
+select '<tr>','<td bgcolor="LIGHTBLUE">', l.group#, '</td>', '<td bgcolor="LIGHTBLUE">', member, '</td>', '<td bgcolor="',decode(f.type, 'ONLINE', 'LIGHTBLUE">', 'ORANGE">'), f.type, '</td>','<td bgcolor="',decode(f.status, 'STALE', 'ORANGE">', 'INVALID', '#FF0000">', '#33FF33">OK'),f.status,'</td>','<td bgcolor="LIGHTBLUE" align=right>',to_char(round(bytes/(1024*1024),2),'99G999G990D00'),'</td>','</tr>' from v$log l,v$logfile f where l.group# = f.group# order by l.group#;
 
 prompt </table><br>
 
@@ -1711,6 +1857,8 @@ and type_obj='SGA') a,
                 and type_obj='SGA')
 	and type_obj='SGA') h
 where a.obj_name=h.obj_name;
+
+select decode(max(to_date(date_aud)),'','<font color="#FF0000"><b><i>Premier audit</i></b></font>','') from ~tblhist where to_date(date_aud) < trunc(sysdate);
 
 prompt </table><br>
 
