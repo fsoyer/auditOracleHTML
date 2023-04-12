@@ -45,6 +45,10 @@ ALTER SESSION SET RECYCLEBIN = OFF;
 -- The first parameter can be added alone on command line,
 -- but the second parameter requires the first to be added before (or the script will take it as first parameter)
 --    and the third requires the two others to be added before for the same reason
+
+-- BE CAREFUL TO QUOTE PARAMETERS IF USED IN A BASH SCRIPT
+-- Ex.: sqlplus user/pass@ORCL @audit_oracle_html "TBS USERAUDIT FILEPREFIX"
+
 -- Force here a default value if no cmd line parameter present
 column 1 new_value 1 noprint
 select '' "1" from dual where rownum = 0;
@@ -457,8 +461,8 @@ BEGIN
    SELECT count(*) into opt FROM V$OPTION where PARAMETER = 'Spatial' and VALUE = 'TRUE';
    SELECT count(*) into mdsys FROM DBA_USERS where USERNAME = 'MDSYS';
    IF opt > 0 and mdsys > 0 then
-      v_sql := 'select ''<tr><td bgcolor="LIGHTBLUE" colspan=4>''||''<b>SPATIAL</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES''||CASE WHEN gvp.counter > 0 AND sdog.counter > 1 THEN ''</td><td bgcolor="#FF0000" align=right><font color=white>YES'' ELSE ''</td><td bgcolor="#33FF33" align=right><font color=black>NO'' END||''</font></td></tr>'' into html from (select count(*) counter from MDSYS.SDO_GEOM_METADATA_TABLE) sdog';
-      execute immediate v_sql;
+      v_sql := 'select ''<tr><td bgcolor="LIGHTBLUE" colspan=4>''||''<b>SPATIAL</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES''||CASE WHEN sdog.counter > 1 THEN ''</td><td bgcolor="#FF0000" align=right><font color=white>YES'' ELSE ''</td><td bgcolor="#33FF33" align=right><font color=black>NO'' END||''</font></td></tr>'' from (select count(*) counter from MDSYS.SDO_GEOM_METADATA_TABLE) sdog';
+      execute immediate v_sql into html;
       dbms_output.put_line(html);
    else
       dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>SPATIAL</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>NO</td><td bgcolor="LIGHTGREY" align=right><font color=black><i>NO</i></font></td></tr>');
@@ -466,10 +470,10 @@ BEGIN
 END;
 /
 
--- OEM TUNING PACK
+-- OPTION : OEM TUNING PACK
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>OEM TUNING PACK</b></td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN dbasp.counter + dbaat.counter + dbass.counter + dbassr.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' from (select count(*) counter from DBA_SQL_PROFILES where lower(STATUS) = 'enabled') dbasp, (select count(*) counter from DBA_ADVISOR_TASKS where ADVISOR_NAME in ('SQL Tuning Advisor', 'SQL Access Advisor') and not (OWNER='SYS' and TASK_NAME='SYS_AUTO_SQL_TUNING_TASK' and DESCRIPTION='Automatic SQL Tuning Task')) dbaat, (select count(*) counter from DBA_SQLSET) dbass, (select count(*) counter from DBA_SQLSET_REFERENCES) dbassr;
 
--- MULTITENANT
+-- OPTON : MULTITENANT
 DECLARE
    html varchar2(4000);
 BEGIN
@@ -524,8 +528,8 @@ DECLARE
 BEGIN
    SELECT count(*) into udv FROM DBA_USERS where USERNAME = 'DVSYS';
    IF udv > 0 then
-      v_sql := 'select ''<tr><td bgcolor="LIGHTBLUE" colspan=4>''||''<b>DATABASE VAULT</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES''||CASE WHEN dbadv.counter > 0 THEN ''</td><td bgcolor="#FF0000" align=right><font color=white>YES'' ELSE ''</td><td bgcolor="#33FF33" align=right><font color=black>NO'' END||''</font></td></tr>'' into html from (select count(*) counter FROM DVSYS.DBA_DV_REALM where upper(name) not like ''ORACLE%'' and upper(name) not like ''%DEFAULT%'') dbadv';
-      execute immediate v_sql;
+      v_sql := 'select ''<tr><td bgcolor="LIGHTBLUE" colspan=4>''||''<b>DATABASE VAULT</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES''||CASE WHEN dbadv.counter > 0 THEN ''</td><td bgcolor="#FF0000" align=right><font color=white>YES'' ELSE ''</td><td bgcolor="#33FF33" align=right><font color=black>NO'' END||''</font></td></tr>'' from (select count(*) counter FROM DVSYS.DBA_DV_REALM where upper(name) not like ''ORACLE%'' and upper(name) not like ''%DEFAULT%'') dbadv';
+      execute immediate v_sql into html;
       dbms_output.put_line(html);
    else
       dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATABASE VAULT</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>NO</td><td bgcolor="LIGHTGREY" align=right><font color=black><i>NO</i></font></td></tr>');
