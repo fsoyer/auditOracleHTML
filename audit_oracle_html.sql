@@ -1148,7 +1148,7 @@ order by t.tablespace_name
   $ELSE
     v_sql := '
 WITH list_tbs AS (
-select distinct OBJ_NAME from system.histaudit where type_obj=''TBS'' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+select distinct OBJ_NAME from ~tblhist where type_obj=''TBS'' and to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
       where to_date(date_aud) < trunc(sysdate))
 )
 select ''<tr><td bgcolor="''||
@@ -1206,7 +1206,7 @@ from (select tablespace_name,
       where df.tablespace_name=dt.tablespace_name(+)
       group by df.tablespace_name, dt.contents, dt.status, BIGFILE) maxt,
 --     V$ENCRYPTED_TABLESPACES venc,
-     V$TABLESPACE vtbs,
+--     V$TABLESPACE vtbs,
      (select tablespace_name,
              round(sum(blocks)*4096/(1024*1024),2) utilise
       from dba_segments
@@ -1215,13 +1215,13 @@ from (select tablespace_name,
              round(sum(blocks)*4096/(1024*1024),2) libre
       from dba_free_space
       group by tablespace_name) l,
-      (select * from system.histaudit
+      (select * from ~tblhist
          where trunc(to_date(date_aud))=trunc(sysdate)
          and type_obj=''TBS'') a,
-      (select * from system.histaudit
+      (select * from ~tblhist
          where to_date(date_aud) like
-        (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
-            where to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from system.histaudit
+        (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
+            where to_date(date_aud) like (select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
       where to_date(date_aud) < trunc(sysdate))
             and type_obj=''TBS'')
          and type_obj=''TBS'') h
