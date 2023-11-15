@@ -118,7 +118,7 @@ END;
 
 -- *************************************** Variables and constants
 -- BEWARE : NO SPACES IN LISTS, OR THE VARIABLE WILL BE TRUNCED !
-define sysusers = ('SYS','SYSTEM','CTXSYS','DBSNMP','OUTLN','ORDSYS','ORDPLUGINS','MDSYS','DMSYS','WMSYS','WKSYS','OLAPSYS','SYSMAN','XDB','EXFSYS','TSMSYS','MGMT_VIEW','ORACLE_OCM','DIP','SI_INFORMTN_SCHEMA','ANONYMOUS','APPQOSSYS')
+define sysusers = ('SYS','SYSTEM','CTXSYS','DBSNMP','OUTLN','ORDSYS','ORDPLUGINS','MDSYS','DMSYS','WMSYS','WKSYS','OLAPSYS','SYSMAN','XDB','EXFSYS','TSMSYS','MGMT_VIEW','ORACLE_OCM','DIP','SI_INFORMTN_SCHEMA','ANONYMOUS','APPQOSSYS','AUDSYS')
 define exusers = ('SCOTT','HR','OE','PM','QS','QS_ADM','QS_CBADM','QS_CS','QS_ES','QS_OS','QS_WS','SH','PERFAUDIT')
 -- Icons (base64)
 variable tips varchar2(2000);
@@ -592,23 +592,25 @@ END;
 
 -- OPTION : MANAGEMENT PACK
 -- prompt DEBUG - MANAGEMENT PACK
-select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','<b>CONTROL MANAGEMENT PACK</b> (diagnostic pack, tuning pack)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default', CASE WHEN display_value = 'NONE' THEN '</td><td bgcolor="#33FF33" align=right><font color=black>' ELSE '</td><td bgcolor="#FF0000" align=right><font color=white>' END, to_char(display_value) || '</font></td></tr>' from v$parameter where UPPER(name) like '%CONTROL_MANAGEMENT_PACK_ACCESS%';
-select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','<b>CONTROL MANAGEMENT PACK</b> (DDL logging)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default', CASE WHEN display_value = 'FALSE' THEN '</td><td bgcolor="#33FF33" align=right><font color=black>' ELSE '</td><td bgcolor="#FF0000" align=right><font color=white>' END, to_char(display_value) || '</font></td></tr>' from v$parameter where UPPER(name) like '%ENABLE_DDL_LOGGING%';
--- Utilisation de AWR
--- select name, detected_usages, currently_used, to_char(last_sample_date,'DD-MON-YYYY:HH24:MI') last_sample from dba_feature_usage_statistics where name = 'AWR Report';
+select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','<b>CONTROL MANAGEMENT PACK parameter</b> (diagnostic pack, tuning pack)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default', CASE WHEN display_value = 'NONE' THEN '</td><td bgcolor="#33FF33" align=right><font color=black>' ELSE '</td><td bgcolor="ORANGE" align=right><font color=black>' END, to_char(display_value) || '</font></td></tr>' from v$parameter where UPPER(name) like '%CONTROL_MANAGEMENT_PACK_ACCESS%';
+select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','<b>CONTROL MANAGEMENT PACK parameter</b> (DDL logging)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default', CASE WHEN display_value = 'FALSE' THEN '</td><td bgcolor="#33FF33" align=right><font color=black>' ELSE '</td><td bgcolor="ORANGE" align=right><font color=black>' END, to_char(display_value) || '</font></td></tr>' from v$parameter where UPPER(name) like '%ENABLE_DDL_LOGGING%';
+
 DECLARE
    opt number;
    html varchar2(4000);
 BEGIN
-   SELECT count(*) into opt FROM dba_feature_usage_statistics where NAME like '%AWR REPORT%';
+   SELECT count(*) into opt FROM dba_feature_usage_statistics where NAME in ('AUTOMATIC WORKLOAD REPOSITORY','%AWR REPORT%','%AWR BASELINE%','%SQL TUNING%','SQL PERF%', '%SQL MONIT%', 'SQL ACCESS', 'ADDM', 'EM PERF%');
    IF opt > 0 then
-         select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>DIAGNOSTIC PACK</b> (AWR Report)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'|| CASE WHEN sum(detected_usages) = 0 OR sum(detected_usages) IS null THEN '</td><td bgcolor="#33FF33" align=right><font color=black> NOT USED' ELSE '</td><td bgcolor="#FF0000" align=right><font color=white>USED' END || '</font></td></tr>' into html from dba_feature_usage_statistics where UPPER(name) like '%AWR REPORT%';
+         select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>DIAGNOSTIC & TUNING PACK usage</b> (AWR Report/ADDM/SQL Tuning)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'|| CASE WHEN sum(detected_usages) = 0 OR sum(detected_usages) IS null THEN '</td><td bgcolor="#33FF33" align=right><font color=black> NOT USED' ELSE '</td><td bgcolor="#FF0000" align=right><font color=white>USED ('|| sum(detected_usages)||')' END || '</font></td></tr>' into html from dba_feature_usage_statistics where UPPER(name) in ('AUTOMATIC WORKLOAD REPOSITORY','%AWR REPORT%','%AWR BASELINE%','%SQL TUNING%','SQL PERF%', '%SQL MONIT%', 'SQL ACCESS', 'ADDM', 'EM PERF%');
       dbms_output.put_line(html);
    else
       SELECT '' into html from dual;
    end if;
 END;
 /
+
+prompt <tr><td bgcolor="#3399CC" align=center colspan=6><font color="WHITE"><b>Autres options utilis&eacute;es (&agrave; v&eacute;rifier selon la version ou l&rsquo;&eacute;dition)</b></font></td></tr>
+prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td width=20% bgcolor="WHITE" align=center><b>Install&eacute;e</b></font></td><td width=20% bgcolor="WHITE" align=center><b>CURRENTLY_USED (DETECTED_USAGES)</b></font></td></tr>
 
 -- AUTRES OPTIONS A VERIFIER
 DECLARE
@@ -618,9 +620,9 @@ DECLARE
    v_res varchar2(512);
    v_sql varchar2(2000);
 BEGIN
-   SELECT count(*) into opt FROM dba_feature_usage_statistics where CURRENTLY_USED='TRUE' and NAME not in ('Data Guard','Oracle Utility Datapump (Export)','%AWR REPORT%');
+   SELECT count(*) into opt FROM dba_feature_usage_statistics where (CURRENTLY_USED='TRUE' OR DETECTED_USAGES>1) and NAME not in ('Data Guard','Oracle Utility Datapump (Export)','AUTOMATIC WORKLOAD REPOSITORY','%AWR REPORT%','%AWR BASELINE%','%SQL TUNING%','SQL PERF%', '%SQL MONIT%', 'SQL ACCESS', 'ADDM', 'EM PERF%');
    IF opt > 0 then
-         v_sql := 'select ''<tr><td bgcolor="LIGHTBLUE" colspan=4><b>AUTRES OPTIONS ACTIVES (A VERIFIER): </b> ''|| NAME ||''</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default</td><td bgcolor="ORANGE" align=right><font color=black>'' || CURRENTLY_USED || ''</font></td></tr>'' from dba_feature_usage_statistics where CURRENTLY_USED=''TRUE'' and NAME not in (''Data Guard'',''Oracle Utility Datapump (Export)'',''%AWR REPORT%'')';
+         v_sql := 'select ''<tr><td bgcolor="LIGHTBLUE" colspan=4><b>''|| NAME ||''</b></td><td bgcolor="LIGHTGREY" align=right><font color=black>By default</td><td bgcolor="ORANGE" align=right><font color=black>'' || CURRENTLY_USED || '' ('' || DETECTED_USAGES || '')</font></td></tr>'' from dba_feature_usage_statistics where CURRENTLY_USED=''TRUE'' and NAME not in (''Data Guard'',''Oracle Utility Datapump (Export)'',''%AWR REPORT%'')';
      open v_cur for v_sql;
      loop
          fetch v_cur into v_res;
