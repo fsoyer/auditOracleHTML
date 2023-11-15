@@ -362,6 +362,7 @@ prompt <td align=center><font color="WHITE"><b>Fonctionnalit&eacute;s soumises &
 prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td width=20% bgcolor="WHITE" align=center><b>Install&eacute;e</b></font></td><td width=20% bgcolor="WHITE" align=center><b>utilis&eacute;e</b></font></td></tr>
 
 -- OPTION : ADVANCED COMPRESSION
+-- prompt DEBUG - ADVANCED COMPRESSION
 DECLARE
    opt number;
    html varchar2(4000);
@@ -378,10 +379,10 @@ BEGIN
       dbms_output.put_line(html);
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - ARCHIVES Compression</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from V$PARAMETER where UPPER(name) like '%LOG_ARCHIVE_DEST%' and UPPER(value) like '%COMPRESSION=ENABLE%';
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'|| '<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Export)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)');
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'|| '<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Export)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)');
       dbms_output.put_line(html);
 -- Import is not concerned by advanced compression feature
---      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Import)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>COMPRESSION NOT USED' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)');
+--      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Import)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)');
 --      dbms_output.put_line(html);
       select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Flashback Data Archive (Total Recall)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN dbafats.counter + dbafat.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from DBA_FLASHBACK_ARCHIVE a left join DBA_FLASHBACK_ARCHIVE_TS b on a.FLASHBACK_ARCHIVE# = b.FLASHBACK_ARCHIVE#) dbafats, (select count(*) counter from DBA_FLASHBACK_ARCHIVE_TABLES) dbafat;
       dbms_output.put_line(html);
@@ -395,6 +396,7 @@ END;
 /
 
 -- OPTION : DATA MINING
+-- prompt DEBUG - DATA MINING
 DECLARE
    opt number;
    model number;
@@ -420,6 +422,7 @@ END;
 /
 
 -- OPTION : ACTIVE DATA GUARD
+-- prompt DEBUG - ACTIVE DATA GUARD
 DECLARE
    opt number;
    html varchar2(4000);
@@ -437,6 +440,7 @@ END;
 /
 
 -- OPTION : RAC (REAL APPLICATION CLUSTERS)
+-- prompt DEBUG - RAC
 DECLARE
    opt number;
    html varchar2(4000);
@@ -452,6 +456,9 @@ END;
 /
 
 -- OPTION : SPATIAL
+-- prompt DEBUG - SPATIAL
+-- NOTE : MDSYS schema sometimes is not accessible to users others than SYS or SYSTEM, occasionning "ORA-00942 : table or view does not exist".
+--        Workaround ? Add grants to users ? Skip Spatial if MDSYS is not accessible ?
 DECLARE
    opt number;
    mdsys number;
@@ -471,9 +478,11 @@ END;
 /
 
 -- OPTION : OEM TUNING PACK
+-- prompt DEBUG - OEM TUNING PACK
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>OEM TUNING PACK</b></td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN dbasp.counter + dbaat.counter + dbass.counter + dbassr.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' from (select count(*) counter from DBA_SQL_PROFILES where lower(STATUS) = 'enabled') dbasp, (select count(*) counter from DBA_ADVISOR_TASKS where ADVISOR_NAME in ('SQL Tuning Advisor', 'SQL Access Advisor') and not (OWNER='SYS' and TASK_NAME='SYS_AUTO_SQL_TUNING_TASK' and DESCRIPTION='Automatic SQL Tuning Task')) dbaat, (select count(*) counter from DBA_SQLSET) dbass, (select count(*) counter from DBA_SQLSET_REFERENCES) dbassr;
 
 -- OPTON : MULTITENANT
+-- prompt DEBUG - MULTITENANT
 DECLARE
    html varchar2(4000);
 BEGIN
@@ -487,6 +496,7 @@ END;
 /
 
 -- OPTION : PARTITIONING
+-- prompt DEBUG - PARTITIONING
 DECLARE
    opt number;
    html varchar2(4000);
@@ -502,6 +512,7 @@ END;
 /
 
 -- OPTION : ADVANCED SECURITY
+-- prompt DEBUG - ADVANCED SECURITY
 DECLARE
    opt number;
    html varchar2(4000);
@@ -521,6 +532,7 @@ END;
 /
 
 -- OPTION : DATABASE VAULT
+-- prompt DEBUG - DATABASE VAULT
 DECLARE
    udv number;
    html varchar2(4000);
@@ -538,6 +550,7 @@ END;
 /
 
 -- OPTION : OLAP
+-- prompt DEBUG - OLAP
 DECLARE
    opt number;
    html varchar2(4000);
@@ -557,6 +570,7 @@ END;
 /
 
 -- OPTION : DATABASE IN-MEMORY
+-- prompt DEBUG - DATABASE IN-MEMORY
 DECLARE
    opt number;
    html varchar2(4000);
@@ -568,6 +582,7 @@ BEGIN
    $IF dbms_db_version.version >= 12 $THEN
    IF opt > 0 then
          select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>DATABASE IN-MEMORY</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN dbat.counter + dbatp.counter + dbatsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from dba_tables where inmemory in ('ENABLED')) dbat, (select count(*) counter from dba_tab_partitions where inmemory in ('ENABLED')) dbatp, (select count(*) counter from dba_tab_subpartitions where inmemory in ('ENABLED')) dbatsp;
+      dbms_output.put_line(html);
    else
       dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>DATABASE IN-MEMORY</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>NO</td><td bgcolor="LIGHTGREY" align=right><font color=black><i>NO</i></font></td></tr>');
    end if;
@@ -576,8 +591,46 @@ END;
 /
 
 -- OPTION : MANAGEMENT PACK
+-- prompt DEBUG - MANAGEMENT PACK
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','<b>CONTROL MANAGEMENT PACK</b> (diagnostic pack, tuning pack)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default', CASE WHEN display_value = 'NONE' THEN '</td><td bgcolor="#33FF33" align=right><font color=black>' ELSE '</td><td bgcolor="#FF0000" align=right><font color=white>' END, to_char(display_value) || '</font></td></tr>' from v$parameter where UPPER(name) like '%CONTROL_MANAGEMENT_PACK_ACCESS%';
 select '<tr><td bgcolor="LIGHTBLUE" colspan=4>','<b>CONTROL MANAGEMENT PACK</b> (DDL logging)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default', CASE WHEN display_value = 'FALSE' THEN '</td><td bgcolor="#33FF33" align=right><font color=black>' ELSE '</td><td bgcolor="#FF0000" align=right><font color=white>' END, to_char(display_value) || '</font></td></tr>' from v$parameter where UPPER(name) like '%ENABLE_DDL_LOGGING%';
+-- Utilisation de AWR
+-- select name, detected_usages, currently_used, to_char(last_sample_date,'DD-MON-YYYY:HH24:MI') last_sample from dba_feature_usage_statistics where name = 'AWR Report';
+DECLARE
+   opt number;
+   html varchar2(4000);
+BEGIN
+   SELECT count(*) into opt FROM dba_feature_usage_statistics where NAME like '%AWR REPORT%';
+   IF opt > 0 then
+         select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>DIAGNOSTIC PACK</b> (AWR Report)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'|| CASE WHEN sum(detected_usages) = 0 OR sum(detected_usages) IS null THEN '</td><td bgcolor="#33FF33" align=right><font color=black> NOT USED' ELSE '</td><td bgcolor="#FF0000" align=right><font color=white>USED' END || '</font></td></tr>' into html from dba_feature_usage_statistics where UPPER(name) like '%AWR REPORT%';
+      dbms_output.put_line(html);
+   else
+      SELECT '' into html from dual;
+   end if;
+END;
+/
+
+-- AUTRES OPTIONS A VERIFIER
+DECLARE
+   opt number;
+--   html varchar2(4000);
+   v_cur SYS_REFCURSOR;
+   v_res varchar2(512);
+   v_sql varchar2(2000);
+BEGIN
+   SELECT count(*) into opt FROM dba_feature_usage_statistics where CURRENTLY_USED='TRUE' and NAME not in ('Data Guard','Oracle Utility Datapump (Export)','%AWR REPORT%');
+   IF opt > 0 then
+         v_sql := 'select ''<tr><td bgcolor="LIGHTBLUE" colspan=4><b>AUTRES OPTIONS ACTIVES (A VERIFIER): </b> ''|| NAME ||''</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default</td><td bgcolor="ORANGE" align=right><font color=black>'' || CURRENTLY_USED || ''</font></td></tr>'' from dba_feature_usage_statistics where CURRENTLY_USED=''TRUE'' and NAME not in (''Data Guard'',''Oracle Utility Datapump (Export)'',''%AWR REPORT%'')';
+     open v_cur for v_sql;
+     loop
+         fetch v_cur into v_res;
+         EXIT WHEN v_cur%NOTFOUND;
+         dbms_output.put_line(v_res);
+     end loop;
+--      dbms_output.put_line(html);
+   end if;
+END;
+/
 
 prompt </table>
 prompt <br>
@@ -1031,7 +1084,7 @@ prompt <tr><td bgcolor="#3399CC" align=center colspan=11>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
 prompt " width="20" height="20" alt="Tips..." title="Les nouveaux tablespaces cr&eacute;&eacute;s depuis le dernier audit apparaissent en orange"></td>
-prompt <td align=center><font color="WHITE"><b>Volum&eacute;trie totale + diff&eacute;rence de tailles depuis le dernier audit (
+prompt <td align=center><font color="WHITE"><b>Volum&eacute;trie + diff&eacute;rence de tailles par tablespace depuis le dernier audit (
 print last_audit
 prompt )</b></font></td></tr></table></td></tr>
 
@@ -1247,10 +1300,6 @@ order by t.tablespace_name
 END;
 /
 
-
-
-
-
 -- TABLESPACE UNDO
 select '<tr>','<td bgcolor="LIGHTBLUE">',t.tablespace_name,'</td>' Tablespace,
        '<td bgcolor="',decode(BIGFILE,'YES','#FF9900','LIGHTBLUE'),'" align=center>',maxt.bigfile,'</td>',
@@ -1396,7 +1445,7 @@ prompt <tr><td bgcolor="#3399CC" align=center colspan=6>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
 prompt " width="20" height="20" alt="Tips..." title="Les nouveaux tablespaces et fichiers cr&eacute;&eacute;s depuis le dernier audit apparaissent en orange"></td>
-prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Liste des datafiles par tablespace</b></font></td></tr></table></td></tr>
+prompt <td bgcolor="#3399CC" align=center><font color="WHITE"><b>Volum&eacute;trie par datafiles</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>Tablespace</b></td><td><b>Fichier</b></td><td><b>Taille (Mo)</b></td><td><b>Autoext.</b></td><td><b>Next</b></td><td><b>MaxSize</b></td></tr>
 
 WITH list_tbs AS (
