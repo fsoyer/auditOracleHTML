@@ -622,7 +622,7 @@ DECLARE
 BEGIN
    SELECT count(*) into opt FROM dba_feature_usage_statistics where (CURRENTLY_USED='TRUE' OR DETECTED_USAGES>1) and NAME not in ('Data Guard','Oracle Utility Datapump (Export)','AUTOMATIC WORKLOAD REPOSITORY','%AWR REPORT%','%AWR BASELINE%','%SQL TUNING%','SQL PERF%', '%SQL MONIT%', 'SQL ACCESS', 'ADDM', 'EM PERF%');
    IF opt > 0 then
-         v_sql := 'select ''<tr><td bgcolor="LIGHTBLUE" colspan=4><b>''|| NAME ||''</b></td><td bgcolor="LIGHTGREY" align=right><font color=black>By default</td><td bgcolor="ORANGE" align=right><font color=black>'' || CURRENTLY_USED || '' ('' || DETECTED_USAGES || '')</font></td></tr>'' from dba_feature_usage_statistics where CURRENTLY_USED=''TRUE'' and NAME not in (''Data Guard'',''Oracle Utility Datapump (Export)'',''%AWR REPORT%'')';
+         v_sql := 'select ''<tr><td bgcolor="LIGHTBLUE" colspan=4>''|| NAME ||''</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default</td><td bgcolor="LIGHTBLUE" align=right><font color=black>'' || CURRENTLY_USED || '' ('' || DETECTED_USAGES || '')</font></td></tr>'' from dba_feature_usage_statistics where CURRENTLY_USED=''TRUE'' and NAME not in (''Data Guard'',''Oracle Utility Datapump (Export)'',''%AWR REPORT%'')';
      open v_cur for v_sql;
      loop
          fetch v_cur into v_res;
