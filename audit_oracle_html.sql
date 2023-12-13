@@ -720,8 +720,10 @@ column audsze new_value vaudsze noprint
 select decode(sign(bytes/1024/1024 - 1) , -1, '0'||replace(to_char(bytes/1024/1024),',','.'),replace(to_char(bytes/1024/1024),',','.')) as audsze from dba_segments
   where owner = 'SYS' and segment_type='TABLE' and segment_name='AUD$';
 
-select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where isdefault <> 'TRUE' and name not in ('audit_trail')
+select '<tr><td bgcolor="LIGHTBLUE">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where isdefault <> 'TRUE' and name not in ('audit_trail','use_large_pages')
 -- in ('control_files','open_cursors','processes','compatible','remote_login_passwordfile','session','utl_file_dir','undo_retention','sec_case_sensitive_logon','diagnostic_dest',db_cache_advice')
+union
+select '<tr><td bgcolor="'||decode(value,'','LIGHTBLUE',NULL,'LIGHTBLUE','FALSE','LIGHTBLUE','#33FF33')||'">',name,'</td>','<td bgcolor="LIGHTBLUE">',value,'</td>','</tr>' from v$parameter where isdefault <> 'TRUE' and name in ('use_large_pages')
 union
 -- display AUD$ table size if revelant
 select '<tr><td bgcolor="LIGHTBLUE">', au.name, '</td>', '<td bgcolor="'|| decode(lower(au.value), 'none', '#33FF33', 'ORANGE') || '">', decode(lower(au.value), 'os', au.value||' ('||aup.value||')', 'xml', au.value||' ('||aup.value||')', 'xml, extended', au.value||' ('||aup.value||')', au.value) || ' (table AUD$ = ' || ~vaudcnt || ' rows, '|| trim(to_char(~vaudsze,'999G999G999G990D00')) ||' Mo)','</td>','</tr>' from v$parameter au, v$parameter aup where au.name='audit_trail' and aup.name='audit_file_dest';
