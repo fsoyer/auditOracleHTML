@@ -356,8 +356,8 @@ select '<tr><td bgcolor="LIGHTBLUE" colspan=5>','Automatic Workload Repository',
 prompt <tr><td bgcolor="#3399CC" align=center colspan=6>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="Si une ou des lignes apparaissent en rouge, des licences pour les fonctionnalit&eacute;s correspondantes (en gras) doivent avoir &eacute;t&eacute; acquises."></td>
-prompt <td align=center><font color="WHITE"><b>Fonctionnalit&eacute;s soumises &agrave; licence</b></font></td></tr></table></td></tr>
+prompt " width="20" height="20" alt="Tips..." title="Si une ou des lignes apparaissent en rouge, des licences pour les fonctionnalit&eacute;s correspondantes (en gras) doivent avoir &eacute;t&eacute; acquises. Si l&apos;usage est &quot;USED&quot;, entre parenth&egrave;ses est indiqu&eacute; le nombre d&apos;utilisations d&eacute;tect&eacute;es.'"></td>
+prompt <td align=center><font color="WHITE"><b>Fonctionnalit&eacute;s soumises &agrave; licence (quelque soit la version)</b></font></td></tr></table></td></tr>
 
 prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td width=20% bgcolor="WHITE" align=center><b>Install&eacute;e</b></font></td><td width=20% bgcolor="WHITE" align=center><b>utilis&eacute;e</b></font></td></tr>
 
@@ -610,7 +610,7 @@ END;
 /
 
 prompt <tr><td bgcolor="#3399CC" align=center colspan=6><font color="WHITE"><b>Autres options utilis&eacute;es (&agrave; v&eacute;rifier selon la version ou l&rsquo;&eacute;dition)</b></font></td></tr>
-prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td width=20% bgcolor="WHITE" align=center><b>Install&eacute;e</b></font></td><td width=20% bgcolor="WHITE" align=center><b>CURRENTLY_USED (DETECTED_USAGES)</b></font></td></tr>
+prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td width=20% bgcolor="WHITE" align=center><b>Install&eacute;e</b></font></td><td width=20% bgcolor="WHITE" align=center><b>CURRENTLY_USED (# DETECTED_USAGES)</b></font></td></tr>
 
 -- AUTRES OPTIONS A VERIFIER
 DECLARE
