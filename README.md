@@ -130,3 +130,4 @@ sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_ora
 * 03/2021 v3.6 added soft and hard parse ratio for library cache from v$sysstat
 * 03/2021 v3.7 added individual hard parse ratio per session
 * 05/2021 v3.8 check of licensed features usage
+* 02/2024 v4.0 some display adjustements since last version. Script now stable.

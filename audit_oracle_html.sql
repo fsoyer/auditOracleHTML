@@ -17,7 +17,7 @@
 
 -- *********************************************** SCRIPT **************************************************
 
-define script_version = 3.8
+define script_version = 4.0
 
 -- *************************************** Initialize SQLPlus variables
 set pages 999
@@ -117,7 +117,7 @@ END;
 /
 
 -- *************************************** Variables and constants
--- BEWARE : NO SPACES IN LISTS, OR THE VARIABLE WILL BE TRUNCED !
+-- CAUTION : NO SPACES IN LISTS, OR THE VARIABLE WILL BE TRUNCED !
 define sysusers = ('SYS','SYSTEM','CTXSYS','DBSNMP','OUTLN','ORDSYS','ORDPLUGINS','MDSYS','DMSYS','WMSYS','WKSYS','OLAPSYS','SYSMAN','XDB','EXFSYS','TSMSYS','MGMT_VIEW','ORACLE_OCM','DIP','SI_INFORMTN_SCHEMA','ANONYMOUS','APPQOSSYS','AUDSYS')
 define exusers = ('SCOTT','HR','OE','PM','QS','QS_ADM','QS_CBADM','QS_CS','QS_ES','QS_OS','QS_WS','SH','PERFAUDIT')
 -- Icons (base64)
@@ -158,8 +158,8 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center> 
 prompt <font color=WHITE size=+2><b>Audit ~dbname (~hstname)
 select ' du ',to_char(to_date(sysdate),'DD-MON-YYYY',N'NLS_DATE_LANGUAGE = AMERICAN'),'</b>' as DATE_AUDIT from dual;
-prompt <font size=1>(v~script_version)</font>
-prompt </font></td></tr></table>
+prompt </font></td><td width=5% align=center><font size=1>(script v~script_version)</font></td>
+prompt </tr></table>
 prompt <br>
 
 -- *************************************** Section informations
