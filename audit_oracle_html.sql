@@ -1550,6 +1550,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Liste des fichiers redo logs</b></font></td></tr>
 prompt <tr><td width=8%><b>Groupe</b></td><td width=25%><b>Fichier</b></td><td width=5%><b>Type</b></td><td width=5%><b>Statut</b></td><td width=15%><b>Taille (Mo)</b></td></tr>
 select '<tr>','<td bgcolor="LIGHTBLUE">', l.group#, '</td>', '<td bgcolor="LIGHTBLUE">', member, '</td>', '<td bgcolor="',decode(f.type, 'ONLINE', 'LIGHTBLUE">', 'ORANGE">'), f.type, '</td>','<td bgcolor="',decode(f.status, 'STALE', 'ORANGE">', 'INVALID', '#FF0000">', '#33FF33">OK'),f.status,'</td>','<td bgcolor="LIGHTBLUE" align=right>',to_char(round(bytes/(1024*1024),2),'99G999G990D00'),'</td>','</tr>' from v$log l,v$logfile f where l.group# = f.group# order by l.group#;
+select '<tr>','<td bgcolor="LIGHTBLUE">', l.group#, '</td>', '<td bgcolor="LIGHTBLUE">', member, '</td>', '<td bgcolor="',decode(f.type, 'ONLINE', 'LIGHTBLUE">', 'ORANGE">'), f.type, '</td>','<td bgcolor="',decode(f.status, 'STALE', 'ORANGE">', 'INVALID', '#FF0000">', '#33FF33">OK'),f.status,'</td>','<td bgcolor="LIGHTBLUE" align=right>',to_char(round(bytes/(1024*1024),2),'99G999G990D00'),'</td>','</tr>' from v$standby_log l,v$logfile f where l.group# = f.group# order by l.group#;
 
 prompt </table><br>
 
@@ -2358,7 +2359,7 @@ prompt </table><br>
 
 -- *************************************** ALERT.LOG
 prompt <hr>
-prompt <div align=center><b><font color="WHITE">ALERT LOG</font></b></div>
+prompt <div align=center><b><font color="WHITE">ALERT LOG (messages depuis le dernier audit)</font></b></div>
 prompt <hr>
 
 -- *************************************** Read the alert.log file
