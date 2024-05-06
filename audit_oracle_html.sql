@@ -17,7 +17,7 @@
 
 -- *********************************************** SCRIPT **************************************************
 
-define script_version = 4.0
+define script_version = 4.1
 
 -- *************************************** Initialize SQLPlus variables
 set pages 999
@@ -1559,18 +1559,20 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" colspan=3>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="ATTENTION : l&rsquo;historique des logs peut &ecirc;tre supprim&eacute; au fur et &agrave; mesure : ces statistiques risquent de ne pas &ecirc;tre viables."></td>
+prompt " width="20" height="20" alt="Tips..." title="La somme quotidienne passe en orange si la moyenne horaire d&eacute;passe 5 switchs/heure. A affiner heure par heure. ATTENTION : l&rsquo;historique des logs peut &ecirc;tre supprim&eacute; au fur et &agrave; mesure : ces statistiques risquent de ne pas &ecirc;tre viables."></td>
 prompt <td align=center><font color="WHITE"><b>Statistiques switchs REDO LOGS</b></font></td></tr></table></td></tr>
-
+ 
 prompt <tr><td width=15%><b>Statistique</b></td><td width=15%><b>Date</b></td><td width=15%><b>Valeur</b></td></tr>
 prompt <tr><td bgcolor="LIGHTBLUE" valign=top>Nombre de switchs par jour (depuis 30 jours)</td>
 prompt <td bgcolor="LIGHTBLUE" align=right>
+-- extraire les jours
 select trunc(first_time),'<br/>' from v$loghist
 where first_time > (sysdate-30)
 group by trunc(first_time)
 order by trunc(first_time);
+-- extraire le nombre
 prompt </td><td bgcolor="LIGHTBLUE" align=right>
-select count(first_time),'<br/>' from v$loghist
+select '<p style="display: inline;background-color:',CASE WHEN count(first_time) <= (5*24) THEN 'LIGHTBLUE">' ELSE 'ORANGE">' END, count(first_time),'</p><br/>' from v$loghist
 where first_time > (sysdate-30)
 group by trunc(first_time)
 order by trunc(first_time);
