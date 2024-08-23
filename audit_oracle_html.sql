@@ -1750,31 +1750,47 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=6>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
-prompt " width="20" height="20" alt="Tips..." title="les jobs &rsquo;GATHER_STATS_JOB&rsquo; et &rsquo;MGMT_STATS_CONFIG_JOB&rsquo; (10g), ou seulement &rsquo;MGMT_STATS_CONFIG_JOB&rsquo; (11g) indiquent si les mises &agrave; jour des statistiques sont activ&eacute;es (&rsquo;SCHEDULED&rsquo;)"></td>
+prompt " width="20" height="20" alt="Tips..." title="les jobs &rsquo;GATHER_STATS_JOB&rsquo; et &rsquo;MGMT_STATS_CONFIG_JOB&rsquo; (10g), ou seulement &rsquo;MGMT_STATS_CONFIG_JOB&rsquo; (11g) indiquent si les mises &agrave; jour des statistiques sont activ&eacute;es (&rsquo;SCHEDULED&rsquo;). Certains jobs SYS ne renvoient pas de r&eacute;sultat."></td>
 
 -- certains jobs sont "SCHEDULED" mais sans dates de lancement car ils n'ont été que 'ENABLED'
 
 prompt <td align=center><font color="WHITE"><b>Liste des Jobs</b></font></td></tr></table></td></tr>
 prompt <tr><td><b>Owner</b></td><td><b>Job</b></td><td><b>Premier lancement</b></td><td><b>Prochain lancement</b></td><td><b>Statut</b></td><td><b>Dernier r&eacute;sultat</td></tr>
 
+-- be sure to reduce the query duration by selecting only 30 last days of logs in temporary table + index automatically emptied at the end of the session.
+BEGIN
+   EXECUTE IMMEDIATE 'create global temporary table DBA_SCHEDULER_JOB_LOG7 AS (SELECT LOG_DATE,JOB_NAME,STATUS from DBA_SCHEDULER_JOB_LOG WHERE LOG_DATE > SYSDATE-30)';
+   EXECUTE IMMEDIATE 'create index DBA_SCHEDULER_JOB_LOG7_IDX ON DBA_SCHEDULER_JOB_LOG7(JOB_NAME,LOG_DATE)';
+EXCEPTION
+   WHEN OTHERS THEN
+      IF SQLCODE != -955 THEN
+         RAISE;
+      END IF;
+END;
+/
+INSERT INTO DBA_SCHEDULER_JOB_LOG7 (SELECT LOG_DATE,JOB_NAME,STATUS from DBA_SCHEDULER_JOB_LOG WHERE LOG_DATE > SYSDATE-7);
 select  '<tr>','<td bgcolor="LIGHTBLUE" align=left>',j.OWNER,'</td>',
 '<td bgcolor="LIGHTBLUE" align=left>',j.JOB_NAME,'</td>',
 '<td bgcolor="',decode(j.START_DATE,NULL,'LIGHTGREY','LIGHTBLUE'),'" align=left>',to_char(j.START_DATE,'DD-MM-YYYY HH:MI'),'</td>',
 '<td bgcolor="',decode(j.NEXT_RUN_DATE,NULL,'LIGHTGREY','LIGHTBLUE'),'" align=left>',to_char(j.NEXT_RUN_DATE,'DD-MM-YYYY HH:MI'),'</td>',
 '<td bgcolor="',
 CASE WHEN j.START_DATE IS NULL AND j.STATE = 'SCHEDULED' THEN 'BLUE'
-     WHEN j.START_DATE IS NOT NULL AND j.STATE IN ('SCHEDULED','SUCCEEDED') THEN '#33FF33' ELSE 'LIGHTGREY' END
+     WHEN j.START_DATE IS NOT NULL AND j.STATE IN ('SCHEDULED','SUCCEEDED') THEN '#33FF33'
+     WHEN j.START_DATE IS NOT NULL AND j.STATE IN ('RUNNING') THEN 'GREEN'
+     ELSE 'LIGHTGREY' END
 ,'" align=right><font color="',
-CASE WHEN j.START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'WHITE' ELSE 'BLACK' END
+CASE WHEN j.START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'WHITE'
+     WHEN j.START_DATE IS NOT NULL AND j.STATE IN ('RUNNING') THEN 'WHITE'
+     ELSE 'BLACK' END
 ,'">',
-CASE WHEN j.START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'ENABLED' ELSE j.STATE END
+CASE WHEN j.START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'ENABLED BUT NOT SCHEDULED' ELSE j.STATE END
 ,'</font></td>',
 '<td bgcolor="',decode(l.STATUS,'FAILED','ORANGE',NULL,'LIGHTGREY','#33FF33'),'" align=left>',l.STATUS,'</td>',
 '</tr>'
 FROM DBA_SCHEDULER_JOBS j
-  FULL OUTER JOIN DBA_SCHEDULER_JOB_LOG l
+  FULL OUTER JOIN DBA_SCHEDULER_JOB_LOG7 l
   ON l.JOB_NAME=j.JOB_NAME
-where l.LOG_DATE = (SELECT max(LOG_DATE) from DBA_SCHEDULER_JOB_LOG where DBA_SCHEDULER_JOB_LOG.JOB_NAME=j.JOB_NAME) OR l.LOG_DATE is NULL
+where l.LOG_DATE = (SELECT max(LOG_DATE) from DBA_SCHEDULER_JOB_LOG7 where DBA_SCHEDULER_JOB_LOG7.JOB_NAME=j.JOB_NAME) OR l.LOG_DATE is NULL
 ORDER BY j.OWNER;
 
 
