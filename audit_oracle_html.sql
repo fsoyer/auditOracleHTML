@@ -1559,7 +1559,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" colspan=3>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="La somme quotidienne passe en orange si la moyenne horaire d&eacute;passe 5 switchs/heure. A affiner heure par heure. ATTENTION : l&rsquo;historique des logs peut &ecirc;tre supprim&eacute; au fur et &agrave; mesure : ces statistiques risquent de ne pas &ecirc;tre viables."></td>
+prompt " width="20" height="20" alt="Tips..." title="La somme quotidienne passe en orange si la moyenne horaire d&eacute;passe 5 switchs/heure (120/jour). A affiner heure par heure. ATTENTION : l&rsquo;historique des logs peut &ecirc;tre supprim&eacute; au fur et &agrave; mesure : ces statistiques risquent de ne pas &ecirc;tre viables."></td>
 prompt <td align=center><font color="WHITE"><b>Statistiques switchs REDO LOGS</b></font></td></tr></table></td></tr>
  
 prompt <tr><td width=15%><b>Statistique</b></td><td width=15%><b>Date</b></td><td width=15%><b>Valeur</b></td></tr>
@@ -1747,7 +1747,7 @@ prompt <hr>
 -- *************************************** Jobs scheduler
 
 prompt <table border=1 width=100% bgcolor="WHITE">
-prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
+prompt <tr><td bgcolor="#3399CC" align=center colspan=6>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print tips
 prompt " width="20" height="20" alt="Tips..." title="les jobs &rsquo;GATHER_STATS_JOB&rsquo; et &rsquo;MGMT_STATS_CONFIG_JOB&rsquo; (10g), ou seulement &rsquo;MGMT_STATS_CONFIG_JOB&rsquo; (11g) indiquent si les mises &agrave; jour des statistiques sont activ&eacute;es (&rsquo;SCHEDULED&rsquo;)"></td>
@@ -1755,16 +1755,28 @@ prompt " width="20" height="20" alt="Tips..." title="les jobs &rsquo;GATHER_STAT
 -- certains jobs sont "SCHEDULED" mais sans dates de lancement car ils n'ont été que 'ENABLED'
 
 prompt <td align=center><font color="WHITE"><b>Liste des Jobs</b></font></td></tr></table></td></tr>
-prompt <tr><td><b>Owner</b></td><td><b>Job</b></td><td><b>Premier lancement</b></td><td><b>Prochain lancement</b></td><td><b>Statut</b></td></tr>
-      select  '<tr>','<td bgcolor="LIGHTBLUE" align=left>',OWNER,'</td>','<td bgcolor="LIGHTBLUE" align=left>',JOB_NAME,'</td>','<td bgcolor="',decode(START_DATE,NULL,'LIGHTGREY','LIGHTBLUE'),'" align=left>',to_char(START_DATE,'DD-MM-YYYY HH:MI'),'</td>','<td bgcolor="',decode(NEXT_RUN_DATE,NULL,'LIGHTGREY','LIGHTBLUE'),'" align=left>',to_char(NEXT_RUN_DATE,'DD-MM-YYYY HH:MI'),'</td>','<td bgcolor="',
-CASE WHEN START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'BLUE' WHEN START_DATE IS NOT NULL AND STATE IN ('SCHEDULED','SUCCEEDED') THEN '#33FF33' ELSE 'LIGHTGREY' END
--- decode(STATE, 'SCHEDULED', 'BLUE', 'SUCCEEDED', 'BLUE', 'ORANGE')
+prompt <tr><td><b>Owner</b></td><td><b>Job</b></td><td><b>Premier lancement</b></td><td><b>Prochain lancement</b></td><td><b>Statut</b></td><td><b>Dernier r&eacute;sultat</td></tr>
+
+select  '<tr>','<td bgcolor="LIGHTBLUE" align=left>',j.OWNER,'</td>',
+'<td bgcolor="LIGHTBLUE" align=left>',j.JOB_NAME,'</td>',
+'<td bgcolor="',decode(j.START_DATE,NULL,'LIGHTGREY','LIGHTBLUE'),'" align=left>',to_char(j.START_DATE,'DD-MM-YYYY HH:MI'),'</td>',
+'<td bgcolor="',decode(j.NEXT_RUN_DATE,NULL,'LIGHTGREY','LIGHTBLUE'),'" align=left>',to_char(j.NEXT_RUN_DATE,'DD-MM-YYYY HH:MI'),'</td>',
+'<td bgcolor="',
+CASE WHEN j.START_DATE IS NULL AND j.STATE = 'SCHEDULED' THEN 'BLUE'
+     WHEN j.START_DATE IS NOT NULL AND j.STATE IN ('SCHEDULED','SUCCEEDED') THEN '#33FF33' ELSE 'LIGHTGREY' END
 ,'" align=right><font color="',
-CASE WHEN START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'WHITE' ELSE 'BLACK' END
+CASE WHEN j.START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'WHITE' ELSE 'BLACK' END
 ,'">',
-CASE WHEN START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'ENABLED' ELSE STATE END
-,'</font></td>','</tr>'
-       FROM DBA_SCHEDULER_JOBS;
+CASE WHEN j.START_DATE IS NULL AND STATE = 'SCHEDULED' THEN 'ENABLED' ELSE j.STATE END
+,'</font></td>',
+'<td bgcolor="',decode(l.STATUS,'FAILED','ORANGE',NULL,'LIGHTGREY','#33FF33'),'" align=left>',l.STATUS,'</td>',
+'</tr>'
+FROM DBA_SCHEDULER_JOBS j
+  FULL OUTER JOIN DBA_SCHEDULER_JOB_LOG l
+  ON l.JOB_NAME=j.JOB_NAME
+where l.LOG_DATE = (SELECT max(LOG_DATE) from DBA_SCHEDULER_JOB_LOG where DBA_SCHEDULER_JOB_LOG.JOB_NAME=j.JOB_NAME) OR l.LOG_DATE is NULL
+ORDER BY j.OWNER;
+
 
 prompt </table><br>
 -- *************************************** Mise à jour automatique des statistiques
@@ -2323,8 +2335,8 @@ from v$process,v$parameter
 where name='pga_aggregate_target'
 group by value;
 
--- *************************************** Detail UGA par utilisateur
-prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>D&eacute;tail UGA par utilisateur</b></font></td></tr>
+-- *************************************** Detail UGA par session
+prompt <tr><td bgcolor="#3399CC" align=center colspan=3><font color="WHITE"><b>D&eacute;tail UGA par session</b></font></td></tr>
 prompt <tr><td width=15% colspan=2><b>Sch&eacute;ma</b></td><td width=15%><b>Nombre de sessions par sch&eacute;ma</b></td></tr>
 
 select '<tr>','<td bgcolor="LIGHTBLUE" colspan=2>',username,'</td>', '<td bgcolor="LIGHTBLUE" align=right>',count(*),'</td>','</tr>'
@@ -2336,7 +2348,7 @@ and s.username is not null
 and n.name='session pga memory'
 group by username;
 
-select '<tr><td width=15% colspan=2><b>Nombre d&rsquo;utilisateurs au moment de l&rsquo;audit</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE">',count(*),'</td>','</tr>'
+select '<tr><td width=15% colspan=2><b>Nombre de sessions au moment de l&rsquo;audit</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE">',count(*),'</td>','</tr>'
 from v$statname n, v$sesstat t, v$session s
 where s.sid=t.sid
 and n.statistic#=t.statistic#
@@ -2344,7 +2356,7 @@ and s.type='USER'
 and s.username is not null
 and n.name='session pga memory';
 
-select '<tr><td width=15% colspan=2><b>Nombre max. d&rsquo;utilisateurs simultan&eacute;s (highwater) / Nombre max. autoris&eacute;s</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE"><b>',sessions_highwater,'/',decode(SESSIONS_MAX,0,'-',SESSIONS_MAX),'</b></td>','</tr>'
+select '<tr><td width=15% colspan=2><b>Nombre max. de sessions simultan&eacute;s (highwater) / Nombre max. autoris&eacute;s</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE"><b>',sessions_highwater,'/',decode(SESSIONS_MAX,0,'-',SESSIONS_MAX),'</b></td>','</tr>'
 from v$license;
 
 select '<tr><td width=15% colspan=2><b>Total UGA (Mo)</b></td>','<td bgcolor="BLUE" align=right><font color="WHITE">',to_char(round(sum(value)/(1024*1024),2),'99G999G990D00'),'</td>','</tr>'
