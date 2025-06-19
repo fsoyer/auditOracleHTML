@@ -158,7 +158,7 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center> 
 prompt <font color=WHITE size=+2><b>Audit ~dbname (~hstname)
 select ' du ',to_char(to_date(sysdate),'DD-MON-YYYY',N'NLS_DATE_LANGUAGE = AMERICAN'),'</b>' as DATE_AUDIT from dual;
-prompt </font></td><td width=5% align=center><font size=1>(script v~script_version)</font></td>
+prompt </font></td><td width=5% align=center><font size=1>(version ~script_version)</font></td>
 prompt </tr></table>
 prompt <br>
 
@@ -288,7 +288,11 @@ prompt </table>
 prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=4><font color="WHITE"><b>H&ocirc;te (statistiques Oracle)</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE"><b>Sockets (courants)</b></td><td bgcolor="WHITE"><b>CPUs logiques (courants) / Coeurs (courants)</b></td><td bgcolor="WHITE"><b>Sockets (highwater)</b></td><td bgcolor="WHITE"><b>CPUs logiques (highwater) / Cores (highwater)</b></td></tr>
-select '<td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_CURRENT,NULL,'-',CPU_SOCKET_COUNT_CURRENT), '</td><td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_CURRENT,' / ', decode(CPU_CORE_COUNT_CURRENT,NULL,'-',CPU_CORE_COUNT_CURRENT), '</td><td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_HIGHWATER,NULL,'-',CPU_SOCKET_COUNT_HIGHWATER), '</td><td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_HIGHWATER, ' / ', decode(CPU_CORE_COUNT_HIGHWATER,NULL,'-',CPU_CORE_COUNT_HIGHWATER), '</td></tr>' from v$license;
+select '<td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_CURRENT,NULL,'-',CPU_SOCKET_COUNT_CURRENT), '</td>',
+ '<td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_CURRENT,' / ', decode(CPU_CORE_COUNT_CURRENT,NULL,'-',CPU_CORE_COUNT_CURRENT), '</td>',
+ '<td bgcolor="LIGHTBLUE" align=center>', decode(CPU_SOCKET_COUNT_HIGHWATER,NULL,'-',CPU_SOCKET_COUNT_HIGHWATER), '</td>',
+ '<td bgcolor="LIGHTBLUE" align=center>', CPU_COUNT_HIGHWATER, ' / ', decode(CPU_CORE_COUNT_HIGHWATER,NULL,'-',CPU_CORE_COUNT_HIGHWATER), '</td></tr>'
+ from v$license;
 
 prompt </table>
 prompt <br>
@@ -313,16 +317,20 @@ prompt </td></tr>
 -- *************************************** MISE A JOUR TABLE HISTORIQUE (VERSION)
 insert into ~tblhist (
 select sysdate, 'VERS', 'Oracle Database', 0, 0, banner
-from v$version
-  where banner like 'Oracle Database%');
+ from v$version
+ where banner like 'Oracle Database%');
 
 -- *************************************** Patchs installés
 prompt <tr><td bgcolor="#3399CC" align=center colspan=5><font color="WHITE"><b>Patchs install&eacute;s</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE"><b>Date</b></td><td bgcolor="WHITE"><b>Action</b></td><td bgcolor="WHITE"><b>Version</b></td><td bgcolor="WHITE"><b>ID</b></td><td bgcolor="WHITE"><b>Description</b></td>
 
-select '<tr><td bgcolor="LIGHTBLUE">',to_char(ACTION_TIME,'DD/MM/YYYY'), '</td><td bgcolor="LIGHTBLUE">', ACTION, '</td><td bgcolor="LIGHTBLUE">', VERSION, '</td><td bgcolor="LIGHTBLUE">', ID, '</td><td bgcolor="LIGHTBLUE">', COMMENTS,'</td></tr>'
-   from sys.registry$history
-   order by 1;
+select '<tr><td bgcolor="LIGHTBLUE">',to_char(ACTION_TIME,'DD/MM/YYYY'), '</td>',
+ '<td bgcolor="LIGHTBLUE">', ACTION, '</td>',
+ '<td bgcolor="LIGHTBLUE">', VERSION, '</td>',
+ '<td bgcolor="LIGHTBLUE">', ID, '</td>',
+ '<td bgcolor="LIGHTBLUE">', COMMENTS,'</td></tr>'
+ from sys.registry$history
+ order by 1;
 
 DECLARE cnt_patch number := 0;
 BEGIN
@@ -340,7 +348,11 @@ prompt <table border=1 width=100% bgcolor="WHITE">
 prompt <tr><td bgcolor="#3399CC" align=center colspan=6><font color="WHITE"><b>Composants install&eacute;s</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE" align=center colspan=3><b>Composant</b></font></td><td bgcolor="WHITE" align=center><b>ID</b></font></td><td bgcolor="WHITE" align=center><b>Statut</b></font></td><td bgcolor="WHITE" align=center><b>Version</b></font></td></tr>
 
-select '<tr><td bgcolor="LIGHTBLUE" colspan=3>',COMP_NAME,'</td><td bgcolor="LIGHTBLUE">', COMP_ID,'</td><td bgcolor="LIGHTBLUE">',STATUS,'</td><td bgcolor="LIGHTBLUE">',VERSION,'</td></tr>' from DBA_REGISTRY;
+select '<tr><td bgcolor="LIGHTBLUE" colspan=3>',COMP_NAME,'</td>',
+ '<td bgcolor="LIGHTBLUE">', COMP_ID,'</td>',
+ '<td bgcolor="LIGHTBLUE">',STATUS,'</td>',
+ '<td bgcolor="LIGHTBLUE">',VERSION,'</td></tr>'
+ from DBA_REGISTRY;
 
 prompt <tr><td bgcolor="#3399CC" align=center colspan=6><font color="WHITE"><b>Options install&eacute;es</b></font></td></tr>
 
@@ -349,14 +361,23 @@ SELECT DISTINCT '<tr><td bgcolor="LIGHTBLUE" colspan=6>',PARAMETER,'</td>','</tr
 prompt <tr><td bgcolor="#3399CC" align=center colspan=6><font color="WHITE"><b>Fonctionnalit&eacute;s non soumises &agrave; licence (&agrave; v&eacute;rifier selon l&rsquo;&eacute;dition)</b></font></td></tr>
 prompt <tr><td bgcolor="WHITE" align=center colspan=5><b>Fonctionnalit&eacute;</b></font></td><td bgcolor="WHITE" align=center><b>Active (derni&egrave;re date d&rsquo;usage)</b></font></td></tr>
 
-select '<tr><td bgcolor="LIGHTBLUE" colspan=5>',a.name,'</td><td bgcolor="LIGHTBLUE" align=right>',a.CURRENTLY_USED || ' (' || decode(a.last_usage_date,NULL,'NONE',to_char(a.last_usage_date)) || ')</td></tr>' from dba_feature_usage_statistics a where a.detected_usages > 0 and a.name not in ('Oracle Utility Datapump (Export)','Data Guard') and a.last_usage_date = (select max(last_usage_date) from dba_feature_usage_statistics where name = a.name) order by a.name;
-select '<tr><td bgcolor="LIGHTBLUE" colspan=5>','Automatic Workload Repository','</td><td bgcolor="LIGHTBLUE" align=right><font color=black>', to_char(display_value) || '</font></td></tr>' from v$parameter where name = 'Automatic Workload Repository';
+select '<tr><td bgcolor="LIGHTBLUE" colspan=5>',a.name,'</td>',
+ '<td bgcolor="LIGHTBLUE" align=right>',a.CURRENTLY_USED || ' (' || decode(a.last_usage_date,NULL,'NONE',to_char(a.last_usage_date)) || ')</td></tr>'
+ from dba_feature_usage_statistics a
+ where a.detected_usages > 0
+ and a.name not in ('Oracle Utility Datapump (Export)','Data Guard')
+ and a.last_usage_date = (select max(last_usage_date) from dba_feature_usage_statistics where name = a.name)
+ order by a.name;
+select '<tr><td bgcolor="LIGHTBLUE" colspan=5>','Automatic Workload Repository','</td>',
+ '<td bgcolor="LIGHTBLUE" align=right><font color=black>', to_char(display_value) || '</font></td></tr>'
+ from v$parameter
+ where name = 'Automatic Workload Repository';
 
 -- *************************************** NON-FREE FEATURES
 prompt <tr><td bgcolor="#3399CC" align=center colspan=6>
 prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
 print info
-prompt " width="20" height="20" alt="Tips..." title="Si une ou des lignes apparaissent en rouge, des licences pour les fonctionnalit&eacute;s correspondantes (en gras) doivent avoir &eacute;t&eacute; acquises. Si l&apos;usage est &quot;USED&quot;, entre parenth&egrave;ses est indiqu&eacute; le nombre d&apos;utilisations d&eacute;tect&eacute;es.'"></td>
+prompt " width="20" height="20" alt="Tips..." title="Si une ou des lignes apparaissent en rouge, des licences pour les fonctionnalit&eacute;s correspondantes (en gras) doivent avoir &eacute;t&eacute; acquises. Si l&apos;usage est &quot;USED&quot;, entre parenth&egrave;ses est indiqu&eacute; le nombre d&apos;utilisations d&eacute;tect&eacute;es."></td>
 prompt <td align=center><font color="WHITE"><b>Fonctionnalit&eacute;s soumises &agrave; licence (quelque soit la version)</b></font></td></tr></table></td></tr>
 
 prompt <tr><td bgcolor="WHITE" align=center colspan=4><b>Fonctionnalit&eacute;</b></font></td><td width=20% bgcolor="WHITE" align=center><b>Install&eacute;e</b></font></td><td width=20% bgcolor="WHITE" align=center><b>utilis&eacute;e</b></font></td></tr>
@@ -371,24 +392,112 @@ BEGIN
 
    SELECT count(*) into opt FROM V$OPTION where PARAMETER like '%Advanced Compression%' and VALUE = 'TRUE';
    IF opt > 0 then
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - OLTP Table Compression</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN dbat.counter + dbatp.counter + dbatsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from dba_tables where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and owner not in ~sysusers and owner not in ~exusers) dbat, (select count(*) counter from dba_tab_partitions where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and table_owner not in ~sysusers and table_owner not in ~exusers) dbatp, (select count(*) counter from dba_tab_subpartitions where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED') and table_owner not in ~sysusers and table_owner not in ~exusers) dbatsp;
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - OLTP Table Compression</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'
+       ||CASE WHEN dbat.counter + dbatp.counter + dbatsp.counter > 0
+         THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES'
+         ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END
+       ||'</font></td></tr>'
+      into html
+      from (select count(*) counter
+             from dba_tables
+             where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED')
+             and owner not in ~sysusers
+             and owner not in ~exusers) dbat,
+           (select count(*) counter
+             from dba_tab_partitions
+             where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED')
+             and table_owner not in ~sysusers
+             and table_owner not in ~exusers) dbatp,
+           (select count(*) counter
+             from dba_tab_subpartitions
+             where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED')
+             and table_owner not in ~sysusers
+             and table_owner not in ~exusers) dbatsp;
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - SecureFiles Compression and Deduplication</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN dbal.counter + dbalp.counter + dbalsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from dba_lobs where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and owner not in ~sysusers and owner not in ~exusers) dbal, (select count(*) counter from dba_lob_partitions where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalp, (select count(*) counter from dba_lob_subpartitions where compression not in ('NO', 'NONE') or deduplication not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalsp;
+
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - SecureFiles Compression and Deduplication</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'
+       ||CASE WHEN dbal.counter + dbalp.counter + dbalsp.counter > 0
+         THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES'
+         ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END
+       ||'</font></td></tr>' into html
+       from (select count(*) counter
+              from dba_lobs
+              where compression not in ('NO', 'NONE')
+              or deduplication not in ('NO', 'NONE')
+              and owner not in ~sysusers
+              and owner not in ~exusers) dbal,
+            (select count(*) counter
+              from dba_lob_partitions
+              where compression not in ('NO', 'NONE')
+              or deduplication not in ('NO', 'NONE')
+              and table_owner not in ~sysusers
+              and table_owner not in ~exusers) dbalp,
+            (select count(*) counter
+              from dba_lob_subpartitions
+              where compression not in ('NO', 'NONE')
+              or deduplication not in ('NO', 'NONE')
+              and table_owner not in ~sysusers
+              and table_owner not in ~exusers) dbalsp;
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Guard Network Compression</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Data Guard' and lower(to_char(dbms_lob.substr(FEATURE_INFO,4000))) like '%compression used: true%' and last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Data Guard');
+
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Guard Network Compression</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'
+       ||CASE WHEN count(*) > 0
+         THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES'
+         ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END
+       ||'</font></td></tr>' into html
+       from dba_feature_usage_statistics
+       where name = 'Data Guard'
+       and lower(to_char(dbms_lob.substr(FEATURE_INFO,4000))) like '%compression used: true%'
+       and last_usage_date=(select max(last_usage_date)
+                             from dba_feature_usage_statistics
+                             where name = 'Data Guard');
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - ARCHIVES Compression</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN count(*) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from V$PARAMETER where UPPER(name) like '%LOG_ARCHIVE_DEST%' and UPPER(value) like '%COMPRESSION=ENABLE%';
+
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - ARCHIVES Compression</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'
+       ||CASE WHEN count(*) > 0
+         THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES'
+         ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END
+       ||'</font></td></tr>' into html
+       from V$PARAMETER
+       where UPPER(name) like '%LOG_ARCHIVE_DEST%'
+       and UPPER(value) like '%COMPRESSION=ENABLE%';
       dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'|| '<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Export)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Export)');
+
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'|| '<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Export)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'
+       ||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0
+         THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED'
+         ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END
+       ||'</font></td></tr>' into html
+       from dba_feature_usage_statistics
+       where name = 'Oracle Utility Datapump (Export)'
+       and (last_usage_date=(select max(last_usage_date)
+                              from dba_feature_usage_statistics
+                              where name = 'Oracle Utility Datapump (Export)')
+                              or last_usage_date is null)
+                              and VERSION = (select max(VERSION)
+                                              from dba_feature_usage_statistics
+                                              where name = 'Oracle Utility Datapump (Export)');
       dbms_output.put_line(html);
+
 -- Import is not concerned by advanced compression feature
 --      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Data Pump Compression (Import)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN to_number(regexp_substr(substr(to_char(dbms_lob.substr(FEATURE_INFO,4000)), instr(to_char(dbms_lob.substr(FEATURE_INFO,4000)),'compression used: ')),'\d+')) > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>COMPRESSION USED' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)' and (last_usage_date=(select max(last_usage_date) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)') or last_usage_date is null) and VERSION = (select max(VERSION) from dba_feature_usage_statistics where name = 'Oracle Utility Datapump (Import)');
 --      dbms_output.put_line(html);
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Flashback Data Archive (Total Recall)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'||CASE WHEN dbafats.counter + dbafat.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from DBA_FLASHBACK_ARCHIVE a left join DBA_FLASHBACK_ARCHIVE_TS b on a.FLASHBACK_ARCHIVE# = b.FLASHBACK_ARCHIVE#) dbafats, (select count(*) counter from DBA_FLASHBACK_ARCHIVE_TABLES) dbafat;
-      dbms_output.put_line(html);
-   else
+
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED COMPRESSION</b> - Flashback Data Archive (Total Recall)</td><td bgcolor="LIGHTGREY" align=right><font color=black>By default'
+       ||CASE WHEN dbafats.counter + dbafat.counter > 0
+         THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES'
+         ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END
+       ||'</font></td></tr>' into html
+       from (select count(*) counter
+              from DBA_FLASHBACK_ARCHIVE a
+              left join DBA_FLASHBACK_ARCHIVE_TS b on a.FLASHBACK_ARCHIVE# = b.FLASHBACK_ARCHIVE#) dbafats,
+            (select count(*) counter
+              from DBA_FLASHBACK_ARCHIVE_TABLES) dbafat;
+      dbms_output.put_line(html); 
+
+   ELSE
       dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>ADVANCED COMPRESSION</b></td><td bgcolor="LIGHTGREY" align=right><font color=black>By default</td><td bgcolor="LIGHTGREY" align=right><font color=black><i>NO</i></font></td></tr>');
-   end if;
+   END IF;
    $ELSE
       select '' into html from dual;
    $END
