@@ -17,7 +17,7 @@
 
 -- *********************************************** SCRIPT **************************************************
 
-define script_version = 4.1
+define script_version = 4.2
 
 -- *************************************** Initialize SQLPlus variables
 set pages 999
@@ -118,7 +118,9 @@ END;
 
 -- *************************************** Variables and constants
 -- CAUTION : NO SPACES IN LISTS, OR THE VARIABLE WILL BE TRUNCED !
-define sysusers = ('SYS','SYSTEM','CTXSYS','DBSNMP','OUTLN','ORDSYS','ORDPLUGINS','MDSYS','DMSYS','WMSYS','WKSYS','OLAPSYS','SYSMAN','XDB','EXFSYS','TSMSYS','MGMT_VIEW','ORACLE_OCM','DIP','SI_INFORMTN_SCHEMA','ANONYMOUS','APPQOSSYS','AUDSYS')
+-- AND : MAXIMUM STRING SIZE IS 240 CHARACTERS. SPLIT IT IF NEEDED !
+define sysusers1 = ('SYS','SYSTEM','CTXSYS','DBSNMP','OUTLN','ORDSYS','ORDPLUGINS','MDSYS','DMSYS','WMSYS','WKSYS','OLAPSYS','SYSMAN','XDB','EXFSYS','TSMSYS','MGMT_VIEW','ORACLE_OCM','DIP','SI_INFORMTN_SCHEMA','ANONYMOUS','APPQOSSYS','AUDSYS')
+define sysusers2 = ('SQLTXPLAIN','GSMADMIN_INTERNAL')
 define exusers = ('SCOTT','HR','OE','PM','QS','QS_ADM','QS_CBADM','QS_CS','QS_ES','QS_OS','QS_WS','SH','PERFAUDIT')
 -- Icons (base64)
 variable tips varchar2(2000);
@@ -401,17 +403,17 @@ BEGIN
       from (select count(*) counter
              from dba_tables
              where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED')
-             and owner not in ~sysusers
+             and owner not in ~sysusers1 and owner not in ~sysusers2
              and owner not in ~exusers) dbat,
            (select count(*) counter
              from dba_tab_partitions
              where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED')
-             and table_owner not in ~sysusers
+             and table_owner not in ~sysusers1 and table_owner not in ~sysusers2
              and table_owner not in ~exusers) dbatp,
            (select count(*) counter
              from dba_tab_subpartitions
              where compress_for in ('FOR ALL OPERATIONS', 'OLTP', 'ADVANCED')
-             and table_owner not in ~sysusers
+             and table_owner not in ~sysusers1 and table_owner not in ~sysusers2
              and table_owner not in ~exusers) dbatsp;
       dbms_output.put_line(html);
 
@@ -424,19 +426,19 @@ BEGIN
               from dba_lobs
               where compression not in ('NO', 'NONE')
               or deduplication not in ('NO', 'NONE')
-              and owner not in ~sysusers
+              and owner not in ~sysusers1 and owner not in ~sysusers2
               and owner not in ~exusers) dbal,
             (select count(*) counter
               from dba_lob_partitions
               where compression not in ('NO', 'NONE')
               or deduplication not in ('NO', 'NONE')
-              and table_owner not in ~sysusers
+              and table_owner not in ~sysusers1 and table_owner not in ~sysusers2
               and table_owner not in ~exusers) dbalp,
             (select count(*) counter
               from dba_lob_subpartitions
               where compression not in ('NO', 'NONE')
               or deduplication not in ('NO', 'NONE')
-              and table_owner not in ~sysusers
+              and table_owner not in ~sysusers1 and table_owner not in ~sysusers2
               and table_owner not in ~exusers) dbalsp;
       dbms_output.put_line(html);
 
@@ -612,7 +614,7 @@ DECLARE
 BEGIN
    SELECT count(*) into opt FROM V$OPTION where PARAMETER = 'Partitioning' and VALUE = 'TRUE';
    IF opt > 0 then
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>PARTITIONING</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN objt.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter FROM DBA_OBJECTS WHERE OBJECT_TYPE LIKE '%PARTITION%'  and owner not in ~sysusers and owner not in ~exusers) objt;
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>PARTITIONING</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN objt.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter FROM DBA_OBJECTS WHERE OBJECT_TYPE LIKE '%PARTITION%'  and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers) objt;
       dbms_output.put_line(html);
    else
       dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>PARTITIONING</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>NO</td><td bgcolor="LIGHTGREY" align=right><font color=black><i>NO</i></font></td></tr>');
@@ -629,7 +631,7 @@ BEGIN
    $IF dbms_db_version.version > 10 $THEN
    SELECT count(*) into opt FROM DBA_TABLESPACES where ENCRYPTED='YES';
    IF opt > 0 then
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED SECURITY (Securefiles encryption)</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN dbat.counter + dbal.counter + dbalp.counter + dbalsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from DBA_TABLESPACES where ENCRYPTED='YES') dbat, (select count(*) counter from DBA_LOBS where ENCRYPT not in ('NO', 'NONE') and owner not in ~sysusers and owner not in ~exusers) dbal, (select count(*) counter from DBA_LOB_PARTITIONS where ENCRYPT not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalp, (select count(*) counter from DBA_LOB_SUBPARTITIONS where ENCRYPT not in ('NO', 'NONE') and table_owner not in ~sysusers and table_owner not in ~exusers) dbalsp;
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>ADVANCED SECURITY (Securefiles encryption)</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN dbat.counter + dbal.counter + dbalp.counter + dbalsp.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from DBA_TABLESPACES where ENCRYPTED='YES') dbat, (select count(*) counter from DBA_LOBS where ENCRYPT not in ('NO', 'NONE') and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers) dbal, (select count(*) counter from DBA_LOB_PARTITIONS where ENCRYPT not in ('NO', 'NONE') and table_owner not in ~sysusers1 and table_owner not in ~sysusers2 and table_owner not in ~exusers) dbalp, (select count(*) counter from DBA_LOB_SUBPARTITIONS where ENCRYPT not in ('NO', 'NONE') and table_owner not in ~sysusers1 and table_owner not in ~sysusers2 and table_owner not in ~exusers) dbalsp;
       dbms_output.put_line(html);
    else
       dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>ADVANCED SECURITY</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>NO</td><td bgcolor="LIGHTGREY" align=right><font color=black><i>NO</i></font></td></tr>');
@@ -667,7 +669,7 @@ BEGIN
    $IF dbms_db_version.version > 10 $THEN
    SELECT count(*) into opt FROM V$OPTION where PARAMETER = 'OLAP' and VALUE = 'TRUE';
    IF opt > 0 then
-      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>OLAP</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN dbac.counter + dbaa.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from  DBA_CUBES where owner not in ~sysusers and owner not in ~exusers) dbac, (select count(*) counter from DBA_AWS) dbaa;
+      select '<tr><td bgcolor="LIGHTBLUE" colspan=4>'||'<b>OLAP</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>YES'||CASE WHEN dbac.counter + dbaa.counter > 0 THEN '</td><td bgcolor="#FF0000" align=right><font color=white>YES' ELSE '</td><td bgcolor="#33FF33" align=right><font color=black>NO' END||'</font></td></tr>' into html from (select count(*) counter from  DBA_CUBES where owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers) dbac, (select count(*) counter from DBA_AWS) dbaa;
       dbms_output.put_line(html);
    else
       dbms_output.put_line('<tr><td bgcolor="LIGHTBLUE" colspan=4><b>OLAP</b></td><td bgcolor="LIGHTBLUE" align=right><font color=black>NO</td><td bgcolor="LIGHTGREY" align=right><font color=black><i>NO</i></font></td></tr>');
@@ -1166,7 +1168,7 @@ select sysdate, 'TAB', 'Total segments tables', total,
 from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(1024*1024),2)) total
       from dba_segments
       where segment_type like 'TABLE%'
-      and owner not in ~sysusers and owner not in ~exusers));
+      and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers));
 delete from ~tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='IND';
 insert into ~tblhist (
 select sysdate, 'IND', 'Total segments indexes', total, 
@@ -1174,7 +1176,7 @@ select sysdate, 'IND', 'Total segments indexes', total,
 from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(1024*1024),2)) total
       from dba_segments
       where segment_type like 'INDEX%'
-      and owner not in ~sysusers and owner not in ~exusers));
+      and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers));
 delete from ~tblhist where trunc(to_date(date_aud))=trunc(sysdate) and type_obj='AUT';
 insert into ~tblhist (
 select sysdate, 'AUT', 'Total segments autres', total, 
@@ -1183,7 +1185,7 @@ from (select decode(round(sum(bytes)/(1024*1024),2),NULL,0,round(sum(bytes)/(102
       from dba_segments
       where segment_type not like 'TABLE%'
       and segment_type not like 'INDEX%'
-      and owner not in ~sysusers and owner not in ~exusers));
+      and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers));
 
 -- *************************************** TABLESPACES
 prompt <hr>
@@ -1616,7 +1618,7 @@ select  '<tr>','<td bgcolor="LIGHTBLUE">TABLES</td>',
         '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',decode(a.total, NULL, to_char(round(-l.total,2),'S99G999G990D00'), to_char(round(a.total-l.total,2),'S99G999G990D00')),'</b></font></td>','</tr>'
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type like 'TABLE%'
-        and owner not in ~sysusers and owner not in ~exusers) a,
+        and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers) a,
 (select * from ~tblhist
 	where to_date(date_aud) like
 	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
@@ -1628,7 +1630,7 @@ select  '<tr>','<td bgcolor="LIGHTBLUE">INDEXES</td>',
         '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',decode(a.total, NULL, to_char(round(-l.total,2),'S99G999G990D00'), to_char(round(a.total-l.total,2),'S99G999G990D00')),'</b></font></td>','</tr>'
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type like 'INDEX%'
-        and owner not in ~sysusers and owner not in ~exusers) a,
+        and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers) a,
 (select * from ~tblhist
 	where to_date(date_aud) like
 	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
@@ -1640,7 +1642,7 @@ select DISTINCT '<tr>','<td bgcolor="LIGHTBLUE">AUTRES (LOB SEGMENTS, LOB INDEXE
         '<td bgcolor="BLUE" align=right><font color="WHITE"><b>',decode(a.total, NULL, to_char(round(-l.total,2),'S99G999G990D00'), to_char(round(a.total-l.total,2),'S99G999G990D00')),'</b></font></td>','</tr>'
 from (select round(sum(bytes)/(1024*1024),2) as total from dba_segments
 	where segment_type not like 'TABLE%' and segment_type not like 'INDEX%'
-        and owner not in ~sysusers and owner not in ~exusers) a,
+        and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers) a,
 (select * from ~tblhist
 	where to_date(date_aud) like
 	(select decode(max(to_date(date_aud)),NULL,trunc(sysdate),max(to_date(date_aud))) from ~tblhist
@@ -2899,6 +2901,54 @@ end;
 
 prompt </table><br>
 
+-- *************************************** Indexes inutilisés
+prompt <!-- Indexes unusable -->
+prompt <table border=1 width=100% bgcolor="WHITE">
+prompt <tr><td bgcolor="#3399CC" align=center colspan=5>
+prompt <table border=0 width=100%><tr><td width=10%>&nbsp;&nbsp;<img src="data:image/gif;base64,
+print info
+prompt " width="20" height="20" alt="Info..." title="Liste des indexes inutilis&eacute;s, n&apos;ayant enregistr&eacute; aucun acc&egrave;s SELECT (total_exec_count is NULL)."></td>
+prompt <td align=center><font color="WHITE"><b>Indexes inutilis&eacute;s</b></font></td></tr></table></td></tr>
+prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=15%><b>Table</b></td><td width=15%><b>Index</b></td><td width=15%><b>Type de contrainte</b></td><td width=15%><b>Taille</b></td></tr>
+
+DECLARE
+ v_res varchar2(32000);
+-- use of $IF $THEN $END for pl/sql conditional compilation
+BEGIN
+  $IF dbms_db_version.version >= 19 $THEN
+	SELECT '<tr>','<td bgcolor="LIGHTBLUE">', i.owner,'</td>','<td bgcolor="LIGHTBLUE">', i.table_name,'</td>','<td bgcolor="LIGHTBLUE">', i.index_name,
+	'</td>','<td bgcolor="LIGHTBLUE">', decode(c.constraint_type,'C', 'Check','U', 'Unique','P','Primary key','F','Foreign key','R','Referential integrity','-'), '<td bgcolor="LIGHTBLUE">', to_char(s.total_size,'999G990D00') total_size,' Mo</td>','</tr>' into v_res1 
+	FROM DBA_INDEXES i
+	LEFT JOIN DBA_CONSTRAINTS c
+	 ON UPPER(i.index_name) = UPPER(c.constraint_name)
+	LEFT JOIN DBA_INDEX_USAGE u
+	 ON UPPER(i.index_name) = UPPER(u.name)
+	LEFT JOIN DBA_OBJECTS o
+	 ON i.index_name = o.object_name
+	 AND i.owner = o.owner
+	 AND o.object_type = 'INDEX'
+	RIGHT JOIN (select segment_name, owner, sum(bytes)/1024/1024 total_size FROM DBA_SEGMENTS
+				group by segment_name, owner) s
+	 ON i.index_name = s.segment_name
+	 AND i.owner=s.owner
+	WHERE i.owner not in ~sysusers1 and i.owner not in ~sysusers2 and i.owner not in ~exusers
+	AND i.index_name not like 'BIN$%'
+	AND i.index_name not like 'SYS_IL%'
+	-- AND (c.constraint_type not in ('P','R','F') or c.constraint_type is null)
+	AND u.total_exec_count is NULL
+	ORDER BY i.owner, s.total_size DESC;
+    dbms_output.put_line(v_res);
+  $ELSE
+    select '<tr><td bgcolor="LIGHTGREY"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor="LIGHTGREY"></td><td bgcolor="LIGHTGREY"></td><td bgcolor="LIGHTGREY"></td><td bgcolor="LIGHTGREY"></td></tr>' into v_res from dual;
+    dbms_output.put_line(v_res);
+  $END
+-- required for 10g as the block $IF-$END disapears, it needs at least on line between BEGIN and END
+  v_res := '';
+END;
+/
+
+prompt </table><br>
+
 -- *************************************** Liste des segments de plus de 100M
 prompt <!-- Segments de plus de 100M -->
 prompt <table border=1 width=100% bgcolor="WHITE">
@@ -2913,7 +2963,7 @@ select '<tr>','<td bgcolor="LIGHTBLUE">',s.owner,'</td>', '<td bgcolor="LIGHTBLU
 from dba_segments s
 where (segment_type like 'TABLE%' OR segment_type like 'INDEX%' OR segment_type like 'LOB%')
 and bytes/1024/1024 >100 
-and owner not in ~sysusers and owner not in ~exusers
+and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
 order by bytes desc;
 
 DECLARE cnt_obj number := 0;
@@ -2921,7 +2971,7 @@ BEGIN
    select count(segment_name) into cnt_obj from dba_segments
    where (segment_type like 'TABLE%' OR segment_type like 'INDEX%' OR segment_type like 'LOB%')
    and bytes/1024/1024 >100 
-   and owner not in ~sysusers and owner not in ~exusers
+   and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
    and rownum = 1;
 
    if cnt_obj=0 then
@@ -2960,7 +3010,7 @@ prompt
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',username,'</td>','</tr>'
 from dba_users
-where username not in ~sysusers and username not in ~exusers;
+where username not in ~sysusers1 and username not in ~sysusers2 and username not in ~exusers;
 
 prompt </table><br>
 
@@ -2973,12 +3023,12 @@ prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=15%><b>Type</b
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',owner,'</td>', '<td bgcolor="LIGHTBLUE">Tables</td>','<td bgcolor="LIGHTBLUE">',count(*),'</td>','</tr>' TOTAL from dba_tables
 	where tablespace_name = 'SYSTEM'
-	and owner not in ~sysusers and owner not in ~exusers
+	and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
 	group by owner;
 -- Indexes
 select '<tr>','<td bgcolor="LIGHTBLUE">',owner,'</td>', '<td bgcolor="LIGHTBLUE">Indexes</td>','<td bgcolor="LIGHTBLUE">',count(*),'</td>','</tr>' TOTAL from dba_indexes
 	where tablespace_name = 'SYSTEM'
-	and owner not in ~sysusers and owner not in ~exusers
+	and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
 	group by owner;
 
 DECLARE
@@ -2987,11 +3037,11 @@ DECLARE
 BEGIN
    select count(*) into cnt_obj_t from dba_tables
 	where tablespace_name = 'SYSTEM'
-	and owner not in ~sysusers and owner not in ~exusers
+	and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
         and rownum = 1;
    select count(*) into cnt_obj_i from dba_indexes
 	where tablespace_name = 'SYSTEM'
-	and owner not in ~sysusers and owner not in ~exusers
+	and owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
         and rownum = 1;
    if cnt_obj_t=0 and cnt_obj_i=0 then
       dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td></tr>');
@@ -3012,7 +3062,7 @@ from dba_tables a, dba_indexes b
 where a.tablespace_name=b.tablespace_name
 and a.table_name=b.table_name
 and a.owner=b.owner
-and a.owner not in ~sysusers and a.owner not in ~exusers
+and a.owner not in ~sysusers1 and a.owner not in ~sysusers2 and a.owner not in ~exusers
 group by a.owner,a.tablespace_name
 order by a.owner,a.tablespace_name;
 
@@ -3022,7 +3072,7 @@ BEGIN
       where a.tablespace_name=b.tablespace_name
       and a.table_name=b.table_name
       and a.owner=b.owner
-      and a.owner not in ~sysusers and a.owner not in ~exusers
+      and a.owner not in ~sysusers1 and a.owner not in ~sysusers2 and a.owner not in ~exusers
       and rownum = 1;
    if cnt_obj=0  then
       dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td></tr>');
@@ -3041,7 +3091,7 @@ prompt
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',username,'</td>', decode(granted_role,NULL,'<td bgcolor="LIGHTGREY"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td>','<td bgcolor="LIGHTBLUE">'||granted_role||'</td>') grole,'</tr>'
 from dba_users, dba_role_privs
-where username not in ~sysusers and username not in ~exusers
+where username not in ~sysusers1 and username not in ~sysusers2 and username not in ~exusers
 and username=grantee(+)
 order by username,grole;
 
@@ -3056,13 +3106,13 @@ prompt
 
 select '<tr>','<td bgcolor="LIGHTBLUE">',username,'</td>','</tr>' from dba_users
 where username not in (select owner from dba_segments)
-and username not in ~sysusers and username not in ~exusers;
+and username not in ~sysusers1 and username not in ~sysusers2 and username not in ~exusers;
 
 DECLARE cnt_sch number;
 BEGIN
    select count(username) into cnt_sch from dba_users
    where username not in (select owner from dba_segments)
-and username not in ~sysusers and username not in ~exusers;
+and username not in ~sysusers1 and username not in ~sysusers2 and username not in ~exusers;
    if cnt_sch=0 then
       dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td></tr>');
    end if;
@@ -3085,21 +3135,21 @@ select '<tr>','<td bgcolor="LIGHTBLUE">',t.owner,'</td>',
 '<td bgcolor="LIGHTBLUE" align=right>',to_char(decode(o.autres,NULL,0,o.autres),'99G999G990'),'</td>','</tr>'
 from  (select owner, count(*) total
       from dba_segments
-      where owner not in ~sysusers and owner not in ~exusers
+      where owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
       group by owner) t,
      (select owner, count(*) tables
       from dba_segments
-      where owner not in ~sysusers and owner not in ~exusers
+      where owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
       and segment_type='TABLE'
       group by owner) a,
      (select owner, count(*) indexes
       from dba_segments
-      where owner not in ~sysusers and owner not in ~exusers
+      where owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
       and segment_type='INDEX'
       group by owner) i,
      (select owner, count(*) autres
       from dba_segments
-      where owner not in ~sysusers and owner not in ~exusers
+      where owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
       and segment_type not in ('TABLE','INDEX')
       group by owner) o
 where t.owner=a.owner(+) and t.owner=i.owner(+) and t.owner=o.owner(+);
@@ -3120,21 +3170,21 @@ select '<tr>','<td bgcolor="LIGHTBLUE">',t.owner,'</td>',
 '<td bgcolor="LIGHTBLUE" align=right>',to_char(decode(o.autres,NULL,0,o.autres),'99G999G990D00'),'</td>','</tr>'
 from  (select owner, round(sum(bytes)/(1024*1024),2) total
       from dba_segments
-      where owner not in ~sysusers and owner not in ~exusers
+      where owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
       group by owner) t,
      (select owner, round(sum(bytes)/(1024*1024),2) tables
       from dba_segments
-      where owner not in ~sysusers and owner not in ~exusers
+      where owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
       and segment_type='TABLE'
       group by owner) a,
      (select owner, round(sum(bytes)/(1024*1024),2) indexes
       from dba_segments
-      where owner not in ~sysusers and owner not in ~exusers
+      where owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
       and segment_type='INDEX'
       group by owner) i,
      (select owner, round(sum(bytes)/(1024*1024),2) autres
       from dba_segments
-      where owner not in ~sysusers and owner not in ~exusers
+      where owner not in ~sysusers1 and owner not in ~sysusers2 and owner not in ~exusers
       and segment_type not in ('TABLE','INDEX')
       group by owner) o
 where t.owner=a.owner(+) and t.owner=i.owner(+) and t.owner=o.owner(+);
@@ -3174,12 +3224,12 @@ prompt
 select '<tr>','<td bgcolor="LIGHTBLUE">',owner,'</td>', '<td bgcolor="LIGHTBLUE">',synonym_name,'</td>', '<td bgcolor="LIGHTBLUE">',table_owner,'</td>',
        '<td bgcolor="LIGHTBLUE">',table_name,'</td>','</tr>'
 from dba_synonyms
-where table_owner not in ~sysusers and table_owner not in ~exusers and ROWNUM <= 5000;
+where table_owner not in ~sysusers1 and table_owner not in ~sysusers2 and table_owner not in ~exusers and ROWNUM <= 5000;
 
 DECLARE cnt_syn number;
 BEGIN
    select count(owner) into cnt_syn from dba_synonyms
-where table_owner not in ~sysusers and table_owner not in ~exusers;
+where table_owner not in ~sysusers1 and table_owner not in ~sysusers2 and table_owner not in ~exusers;
    if cnt_syn=0 then
       dbms_output.put_line('<tr><td bgcolor=LIGHTGREY><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td><td bgcolor=LIGHTGREY></td></tr>');
    end if;
