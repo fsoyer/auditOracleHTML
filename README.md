@@ -132,3 +132,4 @@ sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_ora
 * 05/2021 v3.8 check of licensed features usage
 * 02/2024 v4.0 some display adjustements since last version. Script now stable.
 * 05/2024 v4.1 added standby to the list of redos
+* 06/2025 v4.2 added unused indexes stat, and some other corrections
