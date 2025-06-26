@@ -23,10 +23,11 @@ For a wider understanding, I'll translate parts from french to english, step by 
     GRANT CONNECT, RESOURCE, SELECT ANY DICTIONARY, CREATE ANY DIRECTORY TO MyAuditUser;
     GRANT EXECUTE ON sys.dbms_system TO MyAuditUser;
 ```
-* The script produces an HTML file called "ORACLE_<SID>_<hostname>_<date>.html
+* The script produces an HTML file called "ORACLE_\<SID>_\<hostname>_\<date>.html"
 
-* IMPORTANT : it's better (in fact, actually mandatory) if an extra tablespace (called "TOOLS" by default) exists in the database for a table of audit history. If not, the table can be created in tablespace SYSTEM (but the user must have write right).
-If you want to change this tablespace name, you must change the "tbstools" constante at the beginning of the script.
+* IMPORTANT : it's better if an extra tablespace (called "TOOLS" by default) exists in the database for a table of audit history. If not, the table can be created in tablespace SYSTEM (but the user must have write right).<br/>
+If you want to change definitly this tablespace name, you must change the "tbstools" constant at the beginning of the script.<br/>
+For a temporary change (at exec time), see bellow.
 
 * TNS :
 ```
@@ -36,37 +37,40 @@ If you want to change this tablespace name, you must change the "tbstools" const
 ```
  sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_oracle_html.sql
 ```
-"-S" = silently
+option "-S" is for "silently"
 
 * Example, under linux, with variables et Easyconnect :
 ```
- SQLP=/usr/lib/oracle/xe/app/oracle/product/10.2.0/client/scripts/sqlplus.sh
+ SQLP=/u01/app/oracle/product/db/19c_home1/sqlplus -S
  AUDIT_SCRIPT=/scripts/Audit_Oracle/audit_complet_html
- CONNEXION='//server_oracle:1521/ORCL'
- $SQLP system/manager@$CONNEXION @$AUDIT_SCRIPT
+ CONNECT='//server_oracle:1521/ORCL'
+# Launch with :
+ $SQLP system/manager@$CONNECT @$AUDIT_SCRIPT
 ```
 
-* Sample script sqlplus.sh adapted for linux (UTF8 et line breaks), needs the rlwrap tool
+* Sample script sqlplus.sh adapted for linux (using UTF8 and line breaks), needs the rlwrap tool :
 ```
      #!/bin/bash
      export LD_LIBRARY_PATH=/<rép. Oracle Client>/OraHome_1
      export ORACLE_HOME=/<rép. Oracle Client>/OraHome_1
      export EDITOR=vi
-     NLS_LANG=FRENCH_FRANCE.UTF8 rlwrap -m $ORACLE_HOME/bin/sqlplus $1 $2 $3 $4 $5
+     NLS_LANG=FRENCH_FRANCE.UTF8 rlwrap -m $ORACLE_HOME/bin/sqlplus -S $1 $2 $3 $4 $5
 ```
 
-* Modifying history table name and its tablespace name
-The audit history table name is set by default to HISTAUDIT. It is located by default in tablespace TOOLS.
-The tablespace TOOLS is mandatory for creating the table, or the script stops with a proper error.
-You can modify this default values on command line. Parameter 1 is the tablespace name, parameter 2 is the table name.
-The table name is not necessary if you want to change only the tablespace name, but you MUST specify the tablespace name (param 1) if you want to change the table name (param 2).
-Examples :
-CREATE OR USE AN EXISTING TABLE HISTAUDIT IN AN EXISTING TABLESPACE TOOLS :
-sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_oracle_html.sql
-CREATE OR USE AN EXISTING TABLE HISTAUDIT IN AN EXISTING TABLESPACE USERS :
-sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_oracle_html.sql USERS
-CREATE OR USE AN EXISTING TABLE AUDITDATA IN AN EXISTING TABLESPACE TOOLS :
-sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_oracle_html.sql TOOLS AUDITDATA # "TOOLS" is required as param 1
+* Modifying history table name and its tablespace name :<br/>
+The audit history table name is set by default to HISTAUDIT. It is located by default in tablespace TOOLS.<br/>
+The tablespace TOOLS is mandatory for creating the table, or the script stops with a proper error.<br/>
+You can modify this default values on command line. Parameter 1 is the tablespace name, parameter 2 is the table name.<br/>
+The table name is not necessary if you want to change only the tablespace name, but you MUST specify the tablespace name (param 1) if you want to change the table name (param 2).<br/>
+
+Examples :<br/>
+- CREATE OR USE AN EXISTING DEFAULT TABLE "HISTAUDIT" IN AN EXISTING DEFAULT TABLESPACE "TOOLS" :<br/>
+``` sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_oracle_html.sql<br/> ```
+- CREATE OR USE AN EXISTING DEFAULT TABLE "HISTAUDIT" IN AN EXISTING TABLESPACE "USERS" :<br/>
+``` sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_oracle_html.sql USERS<br/> ```
+- CREATE OR USE AN EXISTING TABLE "AUDITDATA" IN AN EXISTING TABLESPACE "TOOLS" :<br/>
+``` sqlplus -S system/manager@//server_oracle:1521/ORCL @/script_directory/audit_oracle_html.sql TOOLS AUDITDATA ```<br/>
+ "TOOLS" or other tablespace name is required as param 1 before "AUDITDATA"
 
 ----------------------
 * Changelog :

@@ -2912,32 +2912,37 @@ prompt <td align=center><font color="WHITE"><b>Indexes inutilis&eacute;s</b></fo
 prompt <tr><td width=15%><b>Propri&eacute;taire</b></td><td width=15%><b>Table</b></td><td width=15%><b>Index</b></td><td width=15%><b>Type de contrainte</b></td><td width=15%><b>Taille</b></td></tr>
 
 DECLARE
- v_res varchar2(32000);
+ v_cur SYS_REFCURSOR;
+ v_res varchar2(2000);
 -- use of $IF $THEN $END for pl/sql conditional compilation
 BEGIN
   $IF dbms_db_version.version >= 19 $THEN
-	SELECT '<tr>','<td bgcolor="LIGHTBLUE">', i.owner,'</td>','<td bgcolor="LIGHTBLUE">', i.table_name,'</td>','<td bgcolor="LIGHTBLUE">', i.index_name,
-	'</td>','<td bgcolor="LIGHTBLUE">', decode(c.constraint_type,'C', 'Check','U', 'Unique','P','Primary key','F','Foreign key','R','Referential integrity','-'), '<td bgcolor="LIGHTBLUE">', to_char(s.total_size,'999G990D00') total_size,' Mo</td>','</tr>' into v_res1 
-	FROM DBA_INDEXES i
-	LEFT JOIN DBA_CONSTRAINTS c
-	 ON UPPER(i.index_name) = UPPER(c.constraint_name)
-	LEFT JOIN DBA_INDEX_USAGE u
-	 ON UPPER(i.index_name) = UPPER(u.name)
-	LEFT JOIN DBA_OBJECTS o
-	 ON i.index_name = o.object_name
-	 AND i.owner = o.owner
-	 AND o.object_type = 'INDEX'
-	RIGHT JOIN (select segment_name, owner, sum(bytes)/1024/1024 total_size FROM DBA_SEGMENTS
-				group by segment_name, owner) s
-	 ON i.index_name = s.segment_name
-	 AND i.owner=s.owner
-	WHERE i.owner not in ~sysusers1 and i.owner not in ~sysusers2 and i.owner not in ~exusers
-	AND i.index_name not like 'BIN$%'
-	AND i.index_name not like 'SYS_IL%'
-	-- AND (c.constraint_type not in ('P','R','F') or c.constraint_type is null)
-	AND u.total_exec_count is NULL
-	ORDER BY i.owner, s.total_size DESC;
-    dbms_output.put_line(v_res);
+      open v_cur for
+        SELECT '<tr>'||'<td bgcolor="LIGHTBLUE">'|| i.owner ||'</td>'||'<td bgcolor="LIGHTBLUE">'|| i.table_name ||'</td>'||'<td bgcolor="LIGHTBLUE">'|| i.index_name ||
+        '</td>'||'<td bgcolor="LIGHTBLUE">'|| decode(c.constraint_type,'C', 'Check','U', 'Unique','P', 'Primary key','F', 'Foreign key','R', 'Referential integrity', '-')|| '</td>'||'<td bgcolor="LIGHTBLUE">'|| to_char(s.total_size,'999G990D00')||' Mo</td>'||'</tr>'
+        FROM DBA_INDEXES i
+        LEFT JOIN DBA_CONSTRAINTS c
+         ON UPPER(i.index_name) = UPPER(c.constraint_name)
+        LEFT JOIN DBA_INDEX_USAGE u
+         ON UPPER(i.index_name) = UPPER(u.name)
+        LEFT JOIN DBA_OBJECTS o
+         ON i.index_name = o.object_name
+         AND i.owner = o.owner
+         AND o.object_type = 'INDEX'
+        RIGHT JOIN (select segment_name, owner, sum(bytes)/1024/1024 total_size FROM DBA_SEGMENTS
+                                group by segment_name, owner) s
+         ON i.index_name = s.segment_name
+         AND i.owner=s.owner
+        WHERE i.owner not in ~sysusers1 and i.owner not in ~sysusers2 and i.owner not in ~exusers
+        AND i.index_name not like 'BIN$%'
+        AND i.index_name not like 'SYS_IL%'
+        AND u.total_exec_count is NULL
+        ORDER BY i.owner, s.total_size DESC;
+      loop
+        fetch v_cur into v_res;
+        EXIT WHEN v_cur%NOTFOUND;
+        dbms_output.put_line(v_res);
+      end loop;
   $ELSE
     select '<tr><td bgcolor="LIGHTGREY"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" width=20></td><td bgcolor="LIGHTGREY"></td><td bgcolor="LIGHTGREY"></td><td bgcolor="LIGHTGREY"></td><td bgcolor="LIGHTGREY"></td></tr>' into v_res from dual;
     dbms_output.put_line(v_res);
